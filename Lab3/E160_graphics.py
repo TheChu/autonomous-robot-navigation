@@ -41,6 +41,9 @@ class E160_graphics:
         # add track point button
         self.track_point_button = Button(self.bottom_frame, text="Track Point", anchor="s", wraplength=100, command=self.track_point).pack()
 
+        # add track path button
+        self.track_point_button = Button(self.bottom_frame, text="Track Path", anchor="s", wraplength=100, command=self.track_path).pack()
+
         # add stop button
         self.track_point_button = Button(self.bottom_frame, text="Stop", anchor="s", wraplength=100, command=self.stop).pack()
 
@@ -156,6 +159,7 @@ class E160_graphics:
 
     def track_point(self):
         self.environment.control_mode = "AUTONOMOUS CONTROL MODE"
+        self.environment.track_mode = "POINT MODE"
 
         # update sliders on gui
         self.forward_control.set(0)
@@ -170,6 +174,26 @@ class E160_graphics:
             x_des = float(self.x_des_entry.get())
             y_des = float(self.y_des_entry.get())
             theta_des = float(self.theta_des_entry.get())
+            r.state_des.set_state(x_des,y_des,theta_des)
+            r.point_tracked = False
+
+    def track_path(self):
+        self.environment.control_mode = "AUTONOMOUS CONTROL MODE"
+        self.environment.track_mode = "PATH MODE"
+
+        # update sliders on gui
+        self.forward_control.set(0)
+        self.rotate_control.set(0)
+        self.last_forward_control = 0
+        self.last_rotate_control = 0
+        self.R = 0
+        self.L = 0
+
+        # draw robots
+        for r in self.environment.robots:
+            x_des = float(0.2)
+            y_des = float(0.2)
+            theta_des = float(math.pi / 2)
             r.state_des.set_state(x_des,y_des,theta_des)
             r.point_tracked = False
 

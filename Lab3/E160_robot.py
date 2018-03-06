@@ -1,4 +1,3 @@
-
 from E160_state import *
 import math
 import datetime
@@ -34,12 +33,20 @@ class E160_robot:
         self.last_simulated_encoder_R = 0
         self.last_simulated_encoder_L = 0
 
-        self.Kpho = 1#1.0
-        self.Kalpha = 2#2.0
-        self.Kbeta = -0.5#-0.5
+        self.Kpho = 2.0#1.0
+        self.Kalpha = 3.0#2.0
+        self.Kbeta = -1.0#-0.5
+        self.Kp = 2.0
         self.max_velocity = 0.05
         self.point_tracked = True
         self.encoder_per_sec_to_rad_per_sec = 10
+        self.epsilon = 0.01
+        self.epsilon2 = 0.005
+        self.error = 0.08
+        self.min_rotation = 0.05
+        self.max_rotation = 2
+
+        self.checkpoint = False
 
 
     def update(self, deltaT):
@@ -95,7 +102,6 @@ class E160_robot:
 
         return a
 
-
     def update_control(self, range_measurements):
 
         if self.environment.control_mode == "MANUAL CONTROL MODE":
@@ -103,10 +109,34 @@ class E160_robot:
             desiredWheelSpeedL = self.manual_control_left_motor
 
         elif self.environment.control_mode == "AUTONOMOUS CONTROL MODE":
-            desiredWheelSpeedR, desiredWheelSpeedL = self.point_tracker_control()
+            if self.environment.track_mode == "POINT MODE":
+                desiredWheelSpeedR, desiredWheelSpeedL = self.point_tracker_control()
+            elif self.environment.track_mode == "PATH MODE":
+                desiredWheelSpeedR, desiredWheelSpeedL = self.path_tracker_control()
+            else:
+                desiredWheelSpeedR, desiredWheelSpeedL = 0
 
         return desiredWheelSpeedR, desiredWheelSpeedL
 
+    def sign(self, x):
+        if x == 0:
+            return 0
+        elif x > 0:
+            return 1
+        else:
+            return -1
+
+    def path_tracker_control(self):
+
+        if self.point_tracked and not self.checkpoint:
+            x_des = float(0.0)
+            y_des = float(0.4)
+            theta_des = float(-math.pi)
+            self.state_des.set_state(x_des,y_des,theta_des)
+            self.checkpoint0 = True
+            self.point_tracked = False
+
+        return self.point_tracker_control()
 
 
     def point_tracker_control(self):
@@ -119,31 +149,70 @@ class E160_robot:
             delta_x = self.state_des.x - self.state_est.x
             delta_y = self.state_des.y - self.state_est.y
             pho = (delta_x**2 + delta_y**2)**0.5
-            alpha = -self.state_est.theta + math.atan2(delta_y, delta_x)
-            alpha = self.angle_wrap(alpha)
-            goalBehind = False
-            if math.fabs(alpha) > (math.pi / 2): # Goal is behind robot
-              alpha = -self.state_est.theta + math.atan2(-delta_y, -delta_x)
-              alpha = self.angle_wrap(alpha)
-              goalBehind = True
-            beta = -self.state_est.theta - alpha - self.state_des.theta
-            beta = self.angle_wrap(beta)
 
-            desiredV = self.Kpho * pho
-            desiredW = self.Kalpha * alpha + self.Kbeta * beta
-            if goalBehind:
-              desiredV = -desiredV
+            if pho < self.epsilon:
 
-            if math.fabs(desiredV) > self.max_velocity:
-              if desiredV > 0:
-                desiredV = self.max_velocity
-              else:
-                desiredV = -self.max_velocity
+                delta_theta = self.state_des.theta - self.state_est.theta
+                delta_theta = self.angle_wrap(delta_theta)
 
-            desiredWheelSpeedL = (desiredW * self.radius + desiredV) / self.wheel_radius
-            desiredWheelSpeedR = (desiredV - desiredW * self.radius) / self.wheel_radius
+                if math.fabs(delta_theta) < self.epsilon2:
+                    self.point_tracked = True
+                    desiredWheelSpeedL = 0
+                    desiredWheelSpeedR = 0
 
-            print pho, desiredV
+                else:
+                    desiredW = self.Kp * delta_theta
+                    if math.fabs(desiredW) < self.min_rotation:
+                        desiredW = self.sign(desiredW) * self.min_rotation
+                    elif math.fabs(desiredW) > self.max_rotation:
+                        desiredW = self.sign(desiredW) * self.max_rotation
+                    desiredWheelSpeedL = self.encoder_per_sec_to_rad_per_sec * desiredW * self.radius / self.wheel_radius
+                    desiredWheelSpeedR = -self.encoder_per_sec_to_rad_per_sec * desiredW * self.radius / self.wheel_radius
+
+            else:
+
+                alpha = -self.state_est.theta + math.atan2(delta_y, delta_x)
+                alpha = self.angle_wrap(alpha)
+
+                if math.fabs(alpha) > (math.pi / 2 + self.error):
+                    goalBehind = True
+                else:
+                    goalBehind = False
+
+                if goalBehind:
+                    alpha = -self.state_est.theta + math.atan2(-delta_y, -delta_x)
+                    alpha = self.angle_wrap(alpha)
+
+                beta = -self.state_est.theta - alpha + self.state_des.theta
+                beta = self.angle_wrap(beta)
+
+                desiredV = self.Kpho * pho
+                if goalBehind:
+                    desiredV = -desiredV
+
+                if math.fabs(desiredV) > self.max_velocity:
+                    desiredV = self.sign(desiredV) * self.max_velocity
+
+                desiredW = self.Kalpha * alpha + self.Kbeta * beta
+                desiredW = self.angle_wrap(desiredW)
+
+                print alpha, beta, desiredV, desiredW
+
+                # convertRatio = (self.encoder_resolution / (2 * math.pi * self.encoder_per_sec_to_rad_per_sec))
+                desiredWheelSpeedL = self.encoder_per_sec_to_rad_per_sec * (desiredW * self.radius + desiredV) / self.wheel_radius
+                desiredWheelSpeedR = self.encoder_per_sec_to_rad_per_sec * (desiredV - desiredW * self.radius) / self.wheel_radius
+
+                # Prevent robot from moving too fast
+                # if desiredV != 0:
+                #     maxWheelSpeed = self.encoder_per_sec_to_rad_per_sec * self.max_velocity / self.wheel_radius
+                #     if (math.fabs(desiredWheelSpeedL) > maxWheelSpeed) or (math.fabs(desiredWheelSpeedR) > maxWheelSpeed):
+                #         ratio = desiredWheelSpeedL / desiredWheelSpeedR
+                #         if math.fabs(desiredWheelSpeedL) > math.fabs(desiredWheelSpeedR):
+                #             desiredWheelSpeedL = self.sign(desiredWheelSpeedL) * maxWheelSpeed
+                #             desiredWheelSpeedR = desiredWheelSpeedL / ratio
+                #         else:
+                #             desiredWheelSpeedR = self.sign(desiredWheelSpeedR) * maxWheelSpeed
+                #             desiredWheelSpeedL = desiredWheelSpeedR * ratio
 
         # the desired point has been tracked, so don't move
         else:
@@ -153,10 +222,14 @@ class E160_robot:
         return desiredWheelSpeedR,desiredWheelSpeedL
 
 
-    def send_control(self, R, L, deltaT):
+    def send_control(self, L, R, deltaT):
 
         # send to actual robot !!!!!!!!
         if self.environment.robot_mode == "HARDWARE MODE":
+
+            L *= -1
+            R *= -1
+
             if (L < 0):
                 LDIR = 0
             else:
@@ -220,8 +293,8 @@ class E160_robot:
         diffEncoder1 = encoder_measurements[1] - self.last_encoder_measurements[1]
 
         if diffEncoder0 > 1000 or diffEncoder1 > 1000:
-          diffEncoder0 = 0
-          diffEncoder1 = 0
+            diffEncoder0 = 0
+            diffEncoder1 = 0
 
         wheelDistR = self.wheel_radius * diffEncoder0 * (2 * math.pi / self.encoder_resolution)
         wheelDistL = self.wheel_radius * diffEncoder1 * (2 * math.pi / self.encoder_resolution)
