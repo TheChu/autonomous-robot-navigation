@@ -87,7 +87,7 @@ def angled_experiments():
     points_file_name = 'Log/angled_points.txt'
     data_file_name = 'Log/angled_data.txt'
 
-    for i in range(2):
+    for i in range(24):
 
         # instantiate robot navigation classes
         environment = E160_environment(data_file_name)
@@ -96,10 +96,13 @@ def angled_experiments():
         r = environment.robots[0]
         r.make_headers(points_file_name)
 
-        x_des = float(0)
-        y_des = float(0)
-        theta_des = float(i * math.pi / 12)
-        theta_des = r.angle_wrap(theta_des)
+        angle = float(i * math.pi / 12)
+        angle = r.angle_wrap(angle)
+        d = float(0.25)
+
+        x_des = d * math.cos(angle)
+        y_des = d * math.sin(angle)
+        theta_des = float(0)
         r.state_des.set_state(x_des, y_des, theta_des)
         r.point_tracked = False
 
@@ -115,13 +118,13 @@ def angled_experiments():
             # maintain timing
             time.sleep(deltaT)
 
-        print r.state_est.theta
+        print r.state_est.x, r.state_est.y, r.state_est.theta
         r.log_data(points_file_name)
         del environment
 
 def main():
     # forwards_experiments()
-    rotation_experiments()
-    # angled_experiments()
+    # rotation_experiments()
+    angled_experiments()
 
 main()
