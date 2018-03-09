@@ -9,7 +9,7 @@ from xbee import XBee
 class E160_environment:
 
 
-    def __init__(self):
+    def __init__(self, file_name = False):
         self.width = 2.0
         self.height = 1.2
 
@@ -41,7 +41,7 @@ class E160_environment:
         for i in range (0,self.num_robots):
 
             # TODO: assign different address to each bot
-            r = E160_robot(self, '\x00\x0C', i)
+            r = E160_robot(self, '\x00\x0C', i, file_name)
             self.robots.append(r)
 
     def update_robots(self, deltaT):
@@ -57,7 +57,7 @@ class E160_environment:
 
         # loop over all robots and update their state
         for r in self.robots:
-            r.log_data()
+            r.log_data(r.file_name)
 
     def quit(self):
         self.xbee.halt()

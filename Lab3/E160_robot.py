@@ -1,10 +1,11 @@
 from E160_state import *
 import math
 import datetime
+import os.path
 
 class E160_robot:
 
-    def __init__(self, environment, address, robot_id):
+    def __init__(self, environment, address, robot_id, file_name = False):
         self.environment = environment
         self.state_est = E160_state()
         self.state_est.set_state(0,0,0)
@@ -23,8 +24,10 @@ class E160_robot:
         self.robot_id = robot_id
         self.manual_control_left_motor = 0
         self.manual_control_right_motor = 0
-        self.file_name = 'Log/Bot' + str(self.robot_id) + '_' + datetime.datetime.now().replace(microsecond=0).strftime('%y-%m-%d %H.%M.%S') + '.txt'
-        self.make_headers()
+        if file_name == False:
+            file_name = 'Log/Bot' + str(self.robot_id) + '_' + datetime.datetime.now().replace(microsecond=0).strftime('%y-%m-%d %H.%M.%S') + '.txt'
+        self.file_name = file_name
+        self.make_headers(self.file_name)
         self.encoder_resolution = 1440
 
         self.last_encoder_measurements = [0,0]
@@ -194,13 +197,13 @@ class E160_robot:
                     desiredV = self.sign(desiredV) * self.max_velocity
 
                 desiredW = self.Kalpha * alpha + self.Kbeta * beta
-                desiredW = self.angle_wrap(desiredW)
-
-                print alpha, beta, desiredV, desiredW
+                # desiredW = self.angle_wrap(desiredW)
 
                 # convertRatio = (self.encoder_resolution / (2 * math.pi * self.encoder_per_sec_to_rad_per_sec))
                 desiredWheelSpeedL = self.encoder_per_sec_to_rad_per_sec * (desiredW * self.radius + desiredV) / self.wheel_radius
                 desiredWheelSpeedR = self.encoder_per_sec_to_rad_per_sec * (desiredV - desiredW * self.radius) / self.wheel_radius
+
+                # print alpha, beta, desiredV, desiredW, self.state_est.x
 
                 # Prevent robot from moving too fast
                 # if desiredV != 0:
@@ -257,18 +260,25 @@ class E160_robot:
         return [left_encoder_measurement, right_encoder_measurement]
 
 
-    def make_headers(self):
-        f = open(self.file_name, 'a+')
-        f.write('{0} {1:^1} {2:^1} {3:^1} {4:^1} \n'.format('R1', 'R2', 'R3', 'RW', 'LW'))
-        f.close()
+    def make_headers(self, file_name):
+        if not os.path.isfile(file_name):
+            f = open(file_name, 'a+')
+            f.write('{0} {1:^1} {2:^1} {3:^1} {4:^1} {5:^1} \n'.format('X', 'Y', 'Theta', 'DesX', 'DesY', 'DesTheta'))
+            f.close()
 
 
 
-    def log_data(self):
-        f = open(self.file_name, 'a+')
+    def log_data(self, file_name):
+        f = open(file_name, 'a+')
 
         # edit this line to have data logging of the data you care about
-        data = [str(x) for x in [1,2,3,4,5]]
+        data = [str(x) for x in [self.state_est.x,
+                                 self.state_est.y,
+                                 self.state_est.theta,
+                                 self.state_des.x,
+                                 self.state_des.y,
+                                 self.state_des.theta
+                                ]]
 
         f.write(' '.join(data) + '\n')
         f.close()
