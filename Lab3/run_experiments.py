@@ -122,9 +122,51 @@ def angled_experiments():
         r.log_data(points_file_name)
         del environment
 
+def random_experiments():
+    # set time step size in seconds
+    deltaT = 0.1
+
+    points_file_name = 'Log/random_points.txt'
+    data_file_name = 'Log/random_data.txt'
+
+    for i in range(100):
+
+        # instantiate robot navigation classes
+        environment = E160_environment(data_file_name)
+        environment.control_mode = "AUTONOMOUS CONTROL MODE"
+        environment.track_mode = "POINT MODE"
+        r = environment.robots[0]
+        r.make_headers(points_file_name)
+
+        # x and y are random floats from -0.5 to 0.5
+        x_des = random.random() - 0.5
+        y_des = random.random() - 0.5
+        # theta is a random float from -pi to pi
+        theta_des = random.random() * 2 * math.pi
+        theta_des = r.angle_wrap(theta_des)
+        r.state_des.set_state(x_des, y_des, theta_des)
+        r.point_tracked = False
+
+        # loop over time
+        while not r.point_tracked:
+
+            # update robots
+            environment.update_robots(deltaT)
+
+            # log all the robot data
+            environment.log_data()
+
+            # maintain timing
+            time.sleep(deltaT)
+
+        print r.state_est.x, r.state_est.y, r.state_est.theta
+        r.log_data(points_file_name)
+        del environment
+
 def main():
     # forwards_experiments()
     # rotation_experiments()
-    angled_experiments()
+    # angled_experiments()
+    random_experiments()
 
 main()
