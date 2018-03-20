@@ -12,14 +12,14 @@ class E160_PF:
 		self.particles = []
 		self.environment = environment
 		self.numParticles = 400
-		
+
 		# maybe should just pass in a robot class?
 		self.robotWidth = robotWidth
 		self.radius = robotWidth/2
 		self.wheel_radius = wheel_radius
 		self.encoder_resolution = encoder_resolution
 		self.FAR_READING = 1000
-		
+
 		# PF parameters
 		self.IR_sigma = 0.2 # Range finder s.d
 		self.odom_xy_sigma = 1.25	# odometry delta_s s.d
@@ -43,7 +43,7 @@ class E160_PF:
 		self.last_encoder_measurements =[0,0]
 
 	def InitializeParticles(self):
-		''' Populate self.particles with random Particle 
+		''' Populate self.particles with random Particle
 			Args:
 				None
 			Return:
@@ -53,39 +53,39 @@ class E160_PF:
 			#self.SetRandomStartPos(i)
 			self.SetKnownStartPos(i)
 
-			
+
 	def SetRandomStartPos(self, i):
-		# add student code here 
-        
-        
-        
+		# add student code here
+
+
+
         # end student code here
         pass
 
 	def SetKnownStartPos(self, i):
-		# add student code here 
-        
-        
-        
+		# add student code here
+
+
+
         # end student code here
         pass
-            
+
 	def LocalizeEstWithParticleFilter(self, encoder_measurements, sensor_readings):
 		''' Localize the robot with particle filters. Call everything
-			Args: 
+			Args:
 				delta_s (float): change in distance as calculated by odometry
 				delta_heading (float): change in heading as calcualted by odometry
 				sensor_readings([float, float, float]): sensor readings from range fingers
 			Return:
 				None'''
-		
-        # add student code here 
-        
-        
-        
+
+        # add student code here
+
+
+
         # end student code here
-        
-        
+
+
 		return self.GetEstimatedPos()
 
 	def Propagate(self, encoder_measurements, i):
@@ -95,28 +95,28 @@ class E160_PF:
 				delta_heading(float): change in heading based on odometry
 			return:
 				nothing'''
-        # add student code here 
-        
-        
-        
+        # add student code here
+
+
+
         # end student code here
-        
-        
+
+
 	def CalculateWeight(self, sensor_readings, walls, particle):
 		'''Calculate the weight of a particular particle
 			Args:
 				particle (E160_Particle): a given particle
 				sensor_readings ( [float, ...] ): readings from the IR sesnors
-				walls ([ [four doubles], ...] ): positions of the walls from environment, 
-							represented as 4 doubles 
+				walls ([ [four doubles], ...] ): positions of the walls from environment,
+							represented as 4 doubles
 			return:
 				new weight of the particle (float) '''
 
 		newWeight = 0
-        # add student code here 
-        
-        
-        
+        # add student code here
+
+
+
         # end student code here
 		return newWeight
 
@@ -126,65 +126,88 @@ class E160_PF:
 				None
 			Return:
 				None'''
-        # add student code here 
-        
-        
-        
+        # add student code here
+
+
+
         # end student code here
-        
+
 
 
 
 	def GetEstimatedPos(self):
-		''' Calculate the mean of the particles and return it 
+		''' Calculate the mean of the particles and return it
 			Args:
 				None
 			Return:
 				None'''
-        # add student code here 
-        
-        
-        
+        # add student code here
+
+
+
         # end student code here
-        
+
 		return self.state
 
 
 	def FindMinWallDistance(self, particle, walls, sensorT):
-		''' Given a particle position, walls, and a sensor, find 
+		''' Given a particle position, walls, and a sensor, find
 			shortest distance to the wall
 			Args:
-				particle (E160_Particle): a particle 
-				walls ([E160_wall, ...]): represents endpoint of the wall 
+				particle (E160_Particle): a particle
+				walls ([E160_wall, ...]): represents endpoint of the wall
 				sensorT: orientation of the sensor on the robot
 			Return:
 				distance to the closest wall' (float)'''
-        # add student code here 
-        
-        
-        
+        # add student code here
+
+
+
         # end student code here
-        
+
 		return 0
-    
+
+	def DistanceBetween(self, x1, y1, x2, y2):
+		return ((x2 - x1)**2 + (y2 - y1)**2)**0.5
 
 	def FindWallDistance(self, particle, wall, sensorT):
 		''' Given a particle position, a wall, and a sensor, find distance to the wall
 			Args:
-				particle (E160_Particle): a particle 
-				wall ([float x4]): represents endpoint of the wall 
+				particle (E160_Particle): a particle
+				wall ([float x4]): represents endpoint of the wall
 				sensorT: orientation of the sensor on the robot
 			Return:
 				distance to the closest wall (float)'''
-		# add student code here 
-        
-        
-        
-        # end student code here
-        		
-		return 0
+		# add student code here
 
-	
+        # Equation for wall
+		x1 = wall[0]
+		y1 = wall[1]
+		x2 = wall[2]
+		y2 = wall[3]
+		wall_slope = (y2 -y1) / (x2 - x1)
+		wall_intercept = y1 - wall_slope * x1
+
+		# Equation for sensor
+		sensor_slope = math.tan(sensorT + particle.theta)
+		sensor_intercept = particle.y - sensor_slope * particle.x
+
+		if sensor_slope == wall_slope:
+			return float('Inf')
+
+		intersection_x = (wall_intercept - sensor_intercept) / (sensor_slope - wall_slope)
+		intersection_y = wall_slope * intersection_x + wall_intercept
+
+		dist1 = self.DistanceBetween(intersection_x, intersection_y, x1, y1)
+		dist2 = self.DistanceBetween(intersection_x, intersection_y, x2, y2)
+		wall_dist = self.DistanceBetween(x1, y1, x2, y2)
+
+		if dist1 + dist2 == wall_dist:
+			return self.DistanceBetween(particle.x, particle.y, intersection_x, intersection_y)
+		else:
+			return float('Inf')
+
+
 
 	def angleDiff(self, ang):
 		''' Wrap angles between -pi and pi'''
@@ -203,6 +226,3 @@ class E160_PF:
 
 		def __str__(self):
 			return str(self.x) + " " + str(self.y) + " " + str(self.heading) + " " + str(self.weight)
-
-
-
