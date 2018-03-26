@@ -40,7 +40,7 @@ class E160_PF:
 		self.map_maxY = 1.0
 		self.map_minY = -1.0
 		self.InitializeParticles()
-		self.last_encoder_measurements =[0,0]
+		self.last_encoder_measurements = [0,0]
 
 	def InitializeParticles(self):
 		''' Populate self.particles with random Particle
@@ -48,27 +48,25 @@ class E160_PF:
 				None
 			Return:
 				None'''
-		self.particles = []
-		for i in range(0, self.numParticles):
-			#self.SetRandomStartPos(i)
+		self.particles = [None for _ in range(self.numParticles)]
+		for i in range(self.numParticles):
+			# self.SetRandomStartPos(i)
 			self.SetKnownStartPos(i)
 
 
 	def SetRandomStartPos(self, i):
-		# add student code here
-
-
-
-        # end student code here
-        pass
+		x = self.map_minX + random.random() * (self.map_maxX - self.map_minX)
+		y = self.map_minY + random.random() * (self.map_maxY - self.map_minY)
+		heading = -math.pi + random.random() * (2 * math.pi)
+		weight = 1.0 / self.numParticles
+		self.particles[i] = self.Particle(x, y, heading, weight)
 
 	def SetKnownStartPos(self, i):
-		# add student code here
-
-
-
-        # end student code here
-        pass
+		x = 0.0
+		y = 0.0
+		heading = 0.0
+		weight = 1.0 / self.numParticles
+		self.particles[i] = self.Particle(x, y, heading, weight)
 
 	def LocalizeEstWithParticleFilter(self, encoder_measurements, sensor_readings):
 		''' Localize the robot with particle filters. Call everything
@@ -81,7 +79,12 @@ class E160_PF:
 
         # add student code here
 
-
+		for i in range(self.numParticles):
+			self.Propagate(encoder_measurements, i)
+			self.particles[i].weight = self.CalculateWeight(sensor_readings,
+															self.environment.walls,
+															self.particles[i])
+		self.Resample()
 
         # end student code here
 
@@ -97,7 +100,30 @@ class E160_PF:
 				nothing'''
         # add student code here
 
+		# Calculate difference in movement from last time step
+		diffEncoder0 = +(encoder_measurements[0]-self.last_encoder_measurements[0])
+		diffEncoder1 = -(encoder_measurements[1]-self.last_encoder_measurements[1])
 
+		# At the first iteration, zero out
+		if abs(diffEncoder0)> self.FAR_READING or abs(diffEncoder1)> self.FAR_READING:
+			diffEncoder0 = 0
+			diffEncoder1 = 0
+
+		wheelDistanceL = -2 * math.pi * self.wheel_radius / self.encoder_resolution * diffEncoder0
+		wheelDistanceR = 2 * math.pi * self.wheel_radius / self.encoder_resolution * diffEncoder1
+
+		self.last_encoder_measurements[0] = encoder_measurements[0]
+		self.last_encoder_measurements[1] = encoder_measurements[1]
+
+		wheelDistanceL = wheelDistanceL + random.gauss(0, self.odom_xy_sigma)
+		wheelDistanceR = wheelDistanceR + random.gauss(0, self.odom_xy_sigma)
+
+		delta_s = 0.5 * (wheelDistanceR + wheelDistanceL)
+		delta_theta = 0.5 / self.radius * (wheelDistanceR - wheelDistanceL)
+
+		self.particles[i].x = self.particles[i].x + delta_s*math.cos(self.particles[i].heading+delta_theta/2)
+		self.particles[i].y = self.particles[i].y + delta_s*math.sin(self.particles[i].heading+delta_theta/2)
+		self.particles[i].heading = self.particles[i].heading + delta_theta
 
         # end student code here
 
@@ -112,13 +138,15 @@ class E160_PF:
 			return:
 				new weight of the particle (float) '''
 
-		newWeight = 0
         # add student code here
+		expectedMeasurements = [self.FindMinWallDistance(particle, walls, sensorT) for sensorT in self.sensor_orientation]
+		newWeights = []
+		for i in range(len(sensor_readings)):
+			newWeight = (1 / (self.IR_sigma * (2 * math.pi)**0.5)) * math.exp(-0.5 * ((sensor_readings[i] - expectedMeasurements[i]) / self.IR_sigma)**2)
+			newWeights.append(newWeight)
 
-
-
+		return sum(newWeights) / len(newWeights)
         # end student code here
-		return newWeight
 
 	def Resample(self):
 		'''Resample the particles systematically
@@ -127,9 +155,14 @@ class E160_PF:
 			Return:
 				None'''
         # add student code here
-
-
-
+		for i in range(self.numParticles):
+			r = random.random()
+			j = 0
+			wsum = self.particles[0].weight
+			while wsum < r:
+				j += 1
+				wsum += self.particles[j].weight
+			self.particles[i] = self.particles[j]
         # end student code here
 
 
@@ -141,13 +174,12 @@ class E160_PF:
 				None
 			Return:
 				None'''
-        # add student code here
-
-
-
-        # end student code here
-
-		return self.state
+		avgX = sum([particle.x for particle in self.particles])
+		avgY = sum([particle.y for particle in self.particles])
+		avgTheta = sum([particle.heading for particle in self.particles])
+		newState = E160_state()
+		newState.set_state(avgX, avgY, avgTheta)
+		return newState
 
 
 	def FindMinWallDistance(self, particle, walls, sensorT):
@@ -158,17 +190,18 @@ class E160_PF:
 				walls ([E160_wall, ...]): represents endpoint of the wall
 				sensorT: orientation of the sensor on the robot
 			Return:
-				distance to the closest wall' (float)'''
-        # add student code here
+				distance to the closest wall (float)'''
+		wallDistances = []
+		for wall in walls:
+			wallDistances.append(self.FindWallDistance(particle, wall, sensorT))
 
+		return min(wallDistances)
 
+	def crossProduct(self, p1, p2):
+		return p1[0] * p2[1] - p1[1] * p2[0]
 
-        # end student code here
-
-		return 0
-
-	def DistanceBetween(self, x1, y1, x2, y2):
-		return ((x2 - x1)**2 + (y2 - y1)**2)**0.5
+	def vectorDiff(self, p1, p2):
+		return (p2[0] - p1[0], p2[1] - p2[0])
 
 	def FindWallDistance(self, particle, wall, sensorT):
 		''' Given a particle position, a wall, and a sensor, find distance to the wall
@@ -180,32 +213,38 @@ class E160_PF:
 				distance to the closest wall (float)'''
 		# add student code here
 
-        # Equation for wall
-		x1 = wall[0]
-		y1 = wall[1]
-		x2 = wall[2]
-		y2 = wall[3]
-		wall_slope = (y2 -y1) / (x2 - x1)
-		wall_intercept = y1 - wall_slope * x1
+        # Vectors for wall, points are q and q + s
+		x1 = wall.points[0]
+		y1 = wall.points[1]
+		x2 = wall.points[2]
+		y2 = wall.points[3]
+		q = (x1, y1)
+		s = (x2 - x1, y2 - y1)
 
-		# Equation for sensor
-		sensor_slope = math.tan(sensorT + particle.theta)
-		sensor_intercept = particle.y - sensor_slope * particle.x
+		# Vectors for sensor ray
+		p = (particle.x, particle.y)
+		r = (math.cos(sensorT + particle.heading),
+			 math.sin(sensorT + particle.heading))
 
-		if sensor_slope == wall_slope:
+		rsproduct = self.crossProduct(r, s)
+
+		if rsproduct == 0:
+			# Lines are parallel
 			return float('Inf')
 
-		intersection_x = (wall_intercept - sensor_intercept) / (sensor_slope - wall_slope)
-		intersection_y = wall_slope * intersection_x + wall_intercept
+		qpdiff = self.vectorDiff(p, q)
+		t = self.crossProduct(qpdiff, s) / rsproduct
 
-		dist1 = self.DistanceBetween(intersection_x, intersection_y, x1, y1)
-		dist2 = self.DistanceBetween(intersection_x, intersection_y, x2, y2)
-		wall_dist = self.DistanceBetween(x1, y1, x2, y2)
+		pqdiff = self.vectorDiff(q, p)
+		u = self.crossProduct(pqdiff, r) / rsproduct
 
-		if dist1 + dist2 == wall_dist:
-			return self.DistanceBetween(particle.x, particle.y, intersection_x, intersection_y)
-		else:
+		if not (t >= 0 and u >= 0 and u <= 1):
+			# Lines do not intersect
 			return float('Inf')
+
+		# intersection = (p[0] + t * r[0], p[1] + t * r[1])
+
+		return ((t * r[0])**2 + (t * r[1])**2)**0.5
 
 
 
