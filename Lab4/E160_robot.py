@@ -255,7 +255,7 @@ class E160_robot:
           # ****************** Additional Student Code: Start ************
         state.x = state.x + delta_s*math.cos(state.theta+delta_theta/2)
         state.y = state.y + delta_s*math.sin(state.theta+delta_theta/2)
-        state.theta = state.theta + delta_theta
+        state.theta = self.angle_wrap(state.theta + delta_theta)
 
 
         # ****************** Additional Student Code: End ************

@@ -21,8 +21,8 @@ class E160_PF:
 		self.FAR_READING = 1000
 
 		# PF parameters
-		self.IR_sigma = 0.2 # Range finder s.d
-		self.odom_xy_sigma = 1.25	# odometry delta_s s.d
+		self.IR_sigma = 0.8 # Range finder s.d
+		self.odom_xy_sigma = 0.005	# odometry delta_s s.d
 		self.odom_heading_sigma = 0.75	# odometry heading s.d
 		self.particle_weight_sum = 0
 
@@ -39,6 +39,7 @@ class E160_PF:
 		self.map_minX = -1.0
 		self.map_maxY = 1.0
 		self.map_minY = -1.0
+
 		self.InitializeParticles()
 		self.last_encoder_measurements = [0,0]
 
@@ -50,8 +51,8 @@ class E160_PF:
 				None'''
 		self.particles = [None for _ in range(self.numParticles)]
 		for i in range(self.numParticles):
-			# self.SetRandomStartPos(i)
-			self.SetKnownStartPos(i)
+			self.SetRandomStartPos(i)
+			# self.SetKnownStartPos(i)
 
 
 	def SetRandomStartPos(self, i):
@@ -68,6 +69,14 @@ class E160_PF:
 		weight = 1.0 / self.numParticles
 		self.particles[i] = self.Particle(x, y, heading, weight)
 
+	def angle_wrap(self, a):
+		while a > math.pi:
+			a = a - 2*math.pi
+		while a < -math.pi:
+			a = a + 2*math.pi
+
+		return a
+
 	def LocalizeEstWithParticleFilter(self, encoder_measurements, sensor_readings):
 		''' Localize the robot with particle filters. Call everything
 			Args:
@@ -78,13 +87,16 @@ class E160_PF:
 				None'''
 
         # add student code here
-
 		for i in range(self.numParticles):
 			self.Propagate(encoder_measurements, i)
 			self.particles[i].weight = self.CalculateWeight(sensor_readings,
 															self.environment.walls,
 															self.particles[i])
+
 		self.Resample()
+
+		self.last_encoder_measurements[0] = encoder_measurements[0]
+		self.last_encoder_measurements[1] = encoder_measurements[1]
 
         # end student code here
 
@@ -112,9 +124,6 @@ class E160_PF:
 		wheelDistanceL = -2 * math.pi * self.wheel_radius / self.encoder_resolution * diffEncoder0
 		wheelDistanceR = 2 * math.pi * self.wheel_radius / self.encoder_resolution * diffEncoder1
 
-		self.last_encoder_measurements[0] = encoder_measurements[0]
-		self.last_encoder_measurements[1] = encoder_measurements[1]
-
 		wheelDistanceL = wheelDistanceL + random.gauss(0, self.odom_xy_sigma)
 		wheelDistanceR = wheelDistanceR + random.gauss(0, self.odom_xy_sigma)
 
@@ -123,8 +132,7 @@ class E160_PF:
 
 		self.particles[i].x = self.particles[i].x + delta_s*math.cos(self.particles[i].heading+delta_theta/2)
 		self.particles[i].y = self.particles[i].y + delta_s*math.sin(self.particles[i].heading+delta_theta/2)
-		self.particles[i].heading = self.particles[i].heading + delta_theta
-
+		self.particles[i].heading = self.angle_wrap(self.particles[i].heading + delta_theta)
         # end student code here
 
 
@@ -140,12 +148,9 @@ class E160_PF:
 
         # add student code here
 		expectedMeasurements = [self.FindMinWallDistance(particle, walls, sensorT) for sensorT in self.sensor_orientation]
-		newWeights = []
-		for i in range(len(sensor_readings)):
-			newWeight = (1 / (self.IR_sigma * (2 * math.pi)**0.5)) * math.exp(-0.5 * ((sensor_readings[i] - expectedMeasurements[i]) / self.IR_sigma)**2)
-			newWeights.append(newWeight)
-
-		return sum(newWeights) / len(newWeights)
+		errors = [sensor_readings[i] - expectedMeasurements[i] for i in range(len(sensor_readings))]
+		w = norm.pdf(sum([e**2 for e in errors]), 0, self.IR_sigma)
+		return w
         # end student code here
 
 	def Resample(self):
@@ -154,19 +159,47 @@ class E160_PF:
 				None
 			Return:
 				None'''
-        # add student code here
+        # # Exact method
+		# wSum = 1.0 * sum([p.weight for p in self.particles])
+		# for i in range(self.numParticles):
+		# 	r = random.random() * wSum
+		# 	j = 0
+		# 	wsum = self.particles[0].weight
+		# 	while wsum < r and j < self.numParticles - 1:
+		# 		j += 1
+		# 		wsum += self.particles[j].weight
+		# 	self.particles[i] = self.particles[j]
+
+		# Approximate method
+		XTemp = []
+		wTot = max([particle.weight for particle in self.particles])
 		for i in range(self.numParticles):
-			r = random.random()
-			j = 0
-			wsum = self.particles[0].weight
-			while wsum < r and j < self.numParticles - 1:
-				j += 1
-				wsum += self.particles[j].weight
-			self.particles[i] = self.particles[j]
-        # end student code here
+			self.particles[i].weight /= wTot
+			if self.particles[i] < 0.25:
+				XTemp.append(copy.copy(self.particles[i]))
+			elif self.particles[i] < 0.5:
+				XTemp.append(copy.copy(self.particles[i]))
+				XTemp.append(copy.copy(self.particles[i]))
+			elif self.particles[i] < 0.75:
+				XTemp.append(copy.copy(self.particles[i]))
+				XTemp.append(copy.copy(self.particles[i]))
+				XTemp.append(copy.copy(self.particles[i]))
+				XTemp.append(copy.copy(self.particles[i]))
+				XTemp.append(copy.copy(self.particles[i]))
+				XTemp.append(copy.copy(self.particles[i]))
+			elif self.particles[i] < 1.0:
+				XTemp.append(copy.copy(self.particles[i]))
+				XTemp.append(copy.copy(self.particles[i]))
+				XTemp.append(copy.copy(self.particles[i]))
+				XTemp.append(copy.copy(self.particles[i]))
+				XTemp.append(copy.copy(self.particles[i]))
+				XTemp.append(copy.copy(self.particles[i]))
+				XTemp.append(copy.copy(self.particles[i]))
+				XTemp.append(copy.copy(self.particles[i]))
 
-
-
+		for i in range(self.numParticles):
+			r = random.randint(0, len(XTemp) - 1)
+			self.particles[i] = copy.copy(XTemp[r])
 
 	def GetEstimatedPos(self):
 		''' Calculate the mean of the particles and return it
@@ -174,9 +207,9 @@ class E160_PF:
 				None
 			Return:
 				None'''
-		avgX = sum([particle.x for particle in self.particles])
-		avgY = sum([particle.y for particle in self.particles])
-		avgTheta = sum([particle.heading for particle in self.particles])
+		avgX = sum([particle.x for particle in self.particles]) / self.numParticles
+		avgY = sum([particle.y for particle in self.particles]) / self.numParticles
+		avgTheta = sum([particle.heading for particle in self.particles]) / self.numParticles
 		newState = E160_state()
 		newState.set_state(avgX, avgY, avgTheta)
 		return newState
@@ -241,7 +274,7 @@ class E160_PF:
 
 		if rsproduct == 0:
 			# Lines are parallel
-			return float('Inf')
+			return self.FAR_READING
 
 		qpdiff = self.vectorDiff(p, q)
 		t = self.crossProduct(qpdiff, s) / rsproduct
@@ -249,7 +282,7 @@ class E160_PF:
 
 		if not (t >= 0 and u >= 0 and u <= 1):
 			# Lines do not intersect
-			return float('Inf')
+			return self.FAR_READING
 
 		# intersection = (p[0] + t * r[0], p[1] + t * r[1])
 
