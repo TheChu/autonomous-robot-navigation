@@ -21,9 +21,9 @@ class E160_PF:
 		self.FAR_READING = 1000
 
 		# PF parameters
-		self.IR_sigma = 0.8 # Range finder s.d
-		self.odom_xy_sigma = 0.005	# odometry delta_s s.d
-		self.odom_heading_sigma = 0.75	# odometry heading s.d
+		self.IR_sigma = 0.2 # Range finder s.d
+		self.odom_xy_sigma = 0.02	# odometry delta_s s.d
+		self.odom_heading_sigma = 0.002	# odometry heading s.d
 		self.particle_weight_sum = 0
 
 		# define the sensor orientations
@@ -87,13 +87,17 @@ class E160_PF:
 				None'''
 
         # add student code here
+
+		delta_s, delta_heading = self.odometry(encoder_measurements)
+
 		for i in range(self.numParticles):
-			self.Propagate(encoder_measurements, i)
+			self.Propagate(delta_s, delta_heading, i)
 			self.particles[i].weight = self.CalculateWeight(sensor_readings,
 															self.environment.walls,
 															self.particles[i])
 
-		self.Resample()
+		if delta_s != 0.0 or delta_heading != 0.0:
+			self.Resample()
 
 		self.last_encoder_measurements[0] = encoder_measurements[0]
 		self.last_encoder_measurements[1] = encoder_measurements[1]
@@ -103,36 +107,43 @@ class E160_PF:
 
 		return self.GetEstimatedPos()
 
-	def Propagate(self, encoder_measurements, i):
-		'''Propagate all the particles from the last state with odometry readings
-			Args:
-				delta_s (float): distance traveled based on odometry
-				delta_heading(float): change in heading based on odometry
-			return:
-				nothing'''
-        # add student code here
+	def odometry(self, encoder_measurements):
 
 		# Calculate difference in movement from last time step
-		diffEncoder0 = +(encoder_measurements[0]-self.last_encoder_measurements[0])
-		diffEncoder1 = -(encoder_measurements[1]-self.last_encoder_measurements[1])
+		diffEncoder0 = (encoder_measurements[0] - self.last_encoder_measurements[0])
+		diffEncoder1 = -(encoder_measurements[1] - self.last_encoder_measurements[1])
 
 		# At the first iteration, zero out
-		if abs(diffEncoder0)> self.FAR_READING or abs(diffEncoder1)> self.FAR_READING:
+		if abs(diffEncoder0) > self.FAR_READING or abs(diffEncoder1) > self.FAR_READING:
 			diffEncoder0 = 0
 			diffEncoder1 = 0
 
 		wheelDistanceL = -2 * math.pi * self.wheel_radius / self.encoder_resolution * diffEncoder0
 		wheelDistanceR = 2 * math.pi * self.wheel_radius / self.encoder_resolution * diffEncoder1
 
-		wheelDistanceL = wheelDistanceL + random.gauss(0, self.odom_xy_sigma)
-		wheelDistanceR = wheelDistanceR + random.gauss(0, self.odom_xy_sigma)
+		# wheelDistanceL = wheelDistanceL + random.gauss(0, self.odom_xy_sigma)
+		# wheelDistanceR = wheelDistanceR + random.gauss(0, self.odom_xy_sigma)
 
 		delta_s = 0.5 * (wheelDistanceR + wheelDistanceL)
-		delta_theta = 0.5 / self.radius * (wheelDistanceR - wheelDistanceL)
+		delta_heading= 0.5 / self.radius * (wheelDistanceR - wheelDistanceL)
 
-		self.particles[i].x = self.particles[i].x + delta_s*math.cos(self.particles[i].heading+delta_theta/2)
-		self.particles[i].y = self.particles[i].y + delta_s*math.sin(self.particles[i].heading+delta_theta/2)
-		self.particles[i].heading = self.angle_wrap(self.particles[i].heading + delta_theta)
+		return delta_s, delta_heading
+
+	def Propagate(self, delta_s, delta_heading, i):
+		'''Propagate all the particles from the last state with odometry readings
+			Args:
+				delta_s (float): distance traveled based on odometry
+				delta_heading(float): change in heading based on odometry
+			return:
+				nothing'''
+
+        # add student code here
+		if delta_s != 0.0:
+			self.particles[i].x += delta_s * math.cos(self.particles[i].heading + delta_heading/2) + random.gauss(0, self.odom_xy_sigma)
+			self.particles[i].y += delta_s * math.sin(self.particles[i].heading + delta_heading/2) + random.gauss(0, self.odom_xy_sigma)
+
+		if delta_heading != 0.0:
+			self.particles[i].heading = self.angle_wrap(self.particles[i].heading + delta_heading + random.gauss(0, self.odom_heading_sigma))
         # end student code here
 
 
@@ -149,7 +160,7 @@ class E160_PF:
         # add student code here
 		expectedMeasurements = [self.FindMinWallDistance(particle, walls, sensorT) for sensorT in self.sensor_orientation]
 		errors = [sensor_readings[i] - expectedMeasurements[i] for i in range(len(sensor_readings))]
-		w = norm.pdf(sum([e**2 for e in errors]), 0, self.IR_sigma)
+		w = norm.pdf(sum([e**2 for e in errors])**0.5, 0, self.IR_sigma)
 		return w
         # end student code here
 
@@ -175,23 +186,16 @@ class E160_PF:
 		wTot = max([particle.weight for particle in self.particles])
 		for i in range(self.numParticles):
 			self.particles[i].weight /= wTot
-			if self.particles[i] < 0.25:
+			if self.particles[i].weight < 0.25:
 				XTemp.append(copy.copy(self.particles[i]))
-			elif self.particles[i] < 0.5:
-				XTemp.append(copy.copy(self.particles[i]))
-				XTemp.append(copy.copy(self.particles[i]))
-			elif self.particles[i] < 0.75:
+			elif self.particles[i].weight < 0.5:
 				XTemp.append(copy.copy(self.particles[i]))
 				XTemp.append(copy.copy(self.particles[i]))
+			elif self.particles[i].weight < 0.75:
 				XTemp.append(copy.copy(self.particles[i]))
 				XTemp.append(copy.copy(self.particles[i]))
 				XTemp.append(copy.copy(self.particles[i]))
-				XTemp.append(copy.copy(self.particles[i]))
-			elif self.particles[i] < 1.0:
-				XTemp.append(copy.copy(self.particles[i]))
-				XTemp.append(copy.copy(self.particles[i]))
-				XTemp.append(copy.copy(self.particles[i]))
-				XTemp.append(copy.copy(self.particles[i]))
+			elif self.particles[i].weight <= 1.0:
 				XTemp.append(copy.copy(self.particles[i]))
 				XTemp.append(copy.copy(self.particles[i]))
 				XTemp.append(copy.copy(self.particles[i]))
