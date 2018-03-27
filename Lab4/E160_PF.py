@@ -159,7 +159,7 @@ class E160_PF:
 			r = random.random()
 			j = 0
 			wsum = self.particles[0].weight
-			while wsum < r:
+			while wsum < r and j < self.numParticles - 1:
 				j += 1
 				wsum += self.particles[j].weight
 			self.particles[i] = self.particles[j]
@@ -197,11 +197,25 @@ class E160_PF:
 
 		return min(wallDistances)
 
+	def euclidDist(self, p1, p2):
+		return ((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)**0.5
+
+	def extractWall(self, p, wall):
+		distProxy1 = self.euclidDist(p, (wall.points[0], wall.points[1])) + \
+					 self.euclidDist(p, (wall.points[6], wall.points[7]))
+		distProxy2 = self.euclidDist(p, (wall.points[2], wall.points[3])) + \
+					 self.euclidDist(p, (wall.points[4], wall.points[5]))
+
+		if distProxy1 < distProxy2:
+			return wall.points[0], wall.points[1], wall.points[6], wall.points[7]
+		else:
+			return wall.points[2], wall.points[3], wall.points[4], wall.points[5]
+
 	def crossProduct(self, p1, p2):
 		return p1[0] * p2[1] - p1[1] * p2[0]
 
 	def vectorDiff(self, p1, p2):
-		return (p2[0] - p1[0], p2[1] - p2[0])
+		return (p2[0] - p1[0], p2[1] - p1[1])
 
 	def FindWallDistance(self, particle, wall, sensorT):
 		''' Given a particle position, a wall, and a sensor, find distance to the wall
@@ -214,10 +228,7 @@ class E160_PF:
 		# add student code here
 
         # Vectors for wall, points are q and q + s
-		x1 = wall.points[0]
-		y1 = wall.points[1]
-		x2 = wall.points[2]
-		y2 = wall.points[3]
+		x1, y1, x2, y2 = self.extractWall((particle.x, particle.y), wall)
 		q = (x1, y1)
 		s = (x2 - x1, y2 - y1)
 
@@ -234,9 +245,7 @@ class E160_PF:
 
 		qpdiff = self.vectorDiff(p, q)
 		t = self.crossProduct(qpdiff, s) / rsproduct
-
-		pqdiff = self.vectorDiff(q, p)
-		u = self.crossProduct(pqdiff, r) / rsproduct
+		u = self.crossProduct(qpdiff, r) / rsproduct
 
 		if not (t >= 0 and u >= 0 and u <= 1):
 			# Lines do not intersect
