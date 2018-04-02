@@ -3,10 +3,11 @@ from E160_state import *
 from E160_PF import *
 import math
 import datetime
+import os.path
 
 class E160_robot:
 
-    def __init__(self, environment, address, robot_id):
+    def __init__(self, environment, address, robot_id, known, file_name = False):
         self.environment = environment
         self.state_est = E160_state()
         self.state_est.set_state(0,0,0)
@@ -30,8 +31,10 @@ class E160_robot:
         self.robot_id = robot_id
         self.manual_control_left_motor = 0
         self.manual_control_right_motor = 0
-        self.file_name = 'Log/Bot' + str(self.robot_id) + '_' + datetime.datetime.now().replace(microsecond=0).strftime('%y-%m-%d %H.%M.%S') + '.txt'
-        self.make_headers()
+        if file_name == False:
+            file_name = 'Log/Bot' + str(self.robot_id) + '_' + datetime.datetime.now().replace(microsecond=0).strftime('%y-%m-%d %H.%M.%S') + '.txt'
+        self.file_name = file_name
+        self.make_headers(self.file_name)
         self.encoder_resolution = 1440
 
         self.last_encoder_measurements = [0,0]
@@ -40,14 +43,22 @@ class E160_robot:
         self.last_simulated_encoder_R = 0
         self.last_simulated_encoder_L = 0
 
-        self.Kpho = 1#1.0
-        self.Kalpha = 2#2.0
-        self.Kbeta = -0.5#-0.5
+        self.Kpho = 2.0#1.0
+        self.Kalpha = 3.0#2.0
+        self.Kbeta = -1.0#-0.5
+        self.Kp = 2.0
         self.max_velocity = 0.05
         self.point_tracked = True
         self.encoder_per_sec_to_rad_per_sec = 10
+        self.epsilon = 0.01
+        self.epsilon2 = 0.1
+        self.error = 0.08
+        self.min_rotation = 0.05
+        self.max_rotation = 2
 
-        self.PF = E160_PF(environment, self.width, self.wheel_radius, self.encoder_resolution)
+        self.totalT = 0
+
+        self.PF = E160_PF(environment, self.width, self.wheel_radius, self.encoder_resolution, known)
 
 
     def update(self, deltaT):
@@ -76,6 +87,8 @@ class E160_robot:
         # send the control measurements to the robot
         self.send_control(self.R, self.L, deltaT)
 
+        self.totalT += deltaT
+
         #print(self.state_est.x, self.state_est.y, self.state_est.t)
         # self.state_est.set_state(0,0,0)
 
@@ -91,7 +104,13 @@ class E160_robot:
             data = update['rf_data'].decode().split(' ')[:-1]
             data = [int(x) for x in data]
             encoder_measurements = data[-2:]
-            range_measurements = data[:-2]
+            encoder_measurements = encoder_measurements[::-1]
+            encoder_measurements = [-m for m in encoder_measurements]
+            forwardMeasurement, rightMeasurement, leftMeasurement = data[:-2]
+            forwardSensor = 1.36 * math.exp(-2.61*10**(-3)*forwardMeasurement)
+            rightSensor = 1.33 * math.exp(-2.62*10**(-3)*rightMeasurement)
+            leftSensor = 1.49 * math.exp(-2.86*10**(-3)*leftMeasurement)
+            range_measurements = [rightSensor, forwardSensor, leftSensor]
 
         elif self.environment.robot_mode == "SIMULATION MODE":
             encoder_measurements = self.simulate_encoders(self.R, self.L, deltaT)
@@ -129,7 +148,13 @@ class E160_robot:
 
         return desiredWheelSpeedR, desiredWheelSpeedL
 
-
+    def sign(self, x):
+        if x == 0:
+            return 0
+        elif x > 0:
+            return 1
+        else:
+            return -1
 
     def point_tracker_control(self):
 
@@ -138,9 +163,77 @@ class E160_robot:
 
 
             ############ Student code goes here ############################################
+            delta_x = self.state_des.x - self.state_est.x
+            delta_y = self.state_des.y - self.state_est.y
+            pho = (delta_x**2 + delta_y**2)**0.5
+
+            if pho < self.epsilon:
+
+                self.point_tracked = True
+                desiredWheelSpeedL = 0
+                desiredWheelSpeedR = 0
+
+                # delta_theta = self.state_des.theta - self.state_est.theta
+                # delta_theta = self.angle_wrap(delta_theta)
+                #
+                # if math.fabs(delta_theta) < self.epsilon2:
+                #     self.point_tracked = True
+                #     desiredWheelSpeedL = 0
+                #     desiredWheelSpeedR = 0
+                #
+                # else:
+                #     desiredW = self.Kp * delta_theta
+                #     if math.fabs(desiredW) < self.min_rotation:
+                #         desiredW = self.sign(desiredW) * self.min_rotation
+                #     elif math.fabs(desiredW) > self.max_rotation:
+                #         desiredW = self.sign(desiredW) * self.max_rotation
+                #     desiredWheelSpeedR = self.encoder_per_sec_to_rad_per_sec * desiredW * self.radius / self.wheel_radius
+                #     desiredWheelSpeedL = -self.encoder_per_sec_to_rad_per_sec * desiredW * self.radius / self.wheel_radius
+
+            else:
+
+                alpha = -self.state_est.theta + math.atan2(delta_y, delta_x)
+                alpha = self.angle_wrap(alpha)
+
+                if math.fabs(alpha) > (math.pi / 2 + self.error):
+                    goalBehind = True
+                else:
+                    goalBehind = False
+
+                if goalBehind:
+                    alpha = -self.state_est.theta + math.atan2(-delta_y, -delta_x)
+                    alpha = self.angle_wrap(alpha)
+
+                beta = -self.state_est.theta - alpha + self.state_des.theta
+                beta = self.angle_wrap(beta)
+
+                desiredV = self.Kpho * pho
+                if goalBehind:
+                    desiredV = -desiredV
+
+                if math.fabs(desiredV) > self.max_velocity:
+                    desiredV = self.sign(desiredV) * self.max_velocity
+
+                desiredW = self.Kalpha * alpha + self.Kbeta * beta
+                # desiredW = self.angle_wrap(desiredW)
+
+                # convertRatio = (self.encoder_resolution / (2 * math.pi * self.encoder_per_sec_to_rad_per_sec))
+                desiredWheelSpeedR = self.encoder_per_sec_to_rad_per_sec * (desiredW * self.radius + desiredV) / self.wheel_radius
+                desiredWheelSpeedL = self.encoder_per_sec_to_rad_per_sec * (desiredV - desiredW * self.radius) / self.wheel_radius
 
 
-            pass
+                # Prevent robot from moving too fast
+                # if desiredV != 0:
+                #     maxWheelSpeed = self.encoder_per_sec_to_rad_per_sec * self.max_velocity / self.wheel_radius
+                #     if (math.fabs(desiredWheelSpeedL) > maxWheelSpeed) or (math.fabs(desiredWheelSpeedR) > maxWheelSpeed):
+                #         ratio = desiredWheelSpeedL / desiredWheelSpeedR
+                #         if math.fabs(desiredWheelSpeedL) > math.fabs(desiredWheelSpeedR):
+                #             desiredWheelSpeedL = self.sign(desiredWheelSpeedL) * maxWheelSpeed
+                #             desiredWheelSpeedR = desiredWheelSpeedL / ratio
+                #         else:
+                #             desiredWheelSpeedR = self.sign(desiredWheelSpeedR) * maxWheelSpeed
+                #             desiredWheelSpeedL = desiredWheelSpeedR * ratio
+
         # the desired point has been tracked, so don't move
         else:
             desiredWheelSpeedR = 0
@@ -185,18 +278,29 @@ class E160_robot:
 
         return self.PF.FindMinWallDistance(p, self.environment.walls, sensorT)
 
-    def make_headers(self):
-        f = open(self.file_name, 'a+')
-        f.write('{0} {1:^1} {2:^1} {3:^1} {4:^1} \n'.format('R1', 'R2', 'R3', 'RW', 'LW'))
-        f.close()
+    def make_headers(self, file_name):
+        if not os.path.isfile(file_name):
+            f = open(file_name, 'a+')
+            f.write('{0} {1:^1} {2:^1} {3:^1} {4:^1} {5:^1} \n'.format('Failed', 'X', 'Y', 'Theta' 'EstX', 'EstY', 'EstTheta', 'DesX', 'DesY', 'DesTheta'))
+            f.close()
 
 
 
-    def log_data(self):
-        f = open(self.file_name, 'a+')
+    def log_data(self, file_name, failed = False):
+        f = open(file_name, 'a+')
 
         # edit this line to have data logging of the data you care about
-        data = [str(x) for x in [1,2,3,4,5]]
+        data = [str(x) for x in [failed * 1,
+                                 self.state_odo.x,
+                                 self.state_odo.y,
+                                 self.state_odo.theta,
+                                 self.state_est.x,
+                                 self.state_est.y,
+                                 self.state_est.theta,
+                                 self.state_des.x,
+                                 self.state_des.y,
+                                 self.state_des.theta
+                                ]]
 
         f.write(' '.join(data) + '\n')
         f.close()

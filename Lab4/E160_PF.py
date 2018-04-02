@@ -8,7 +8,7 @@ from scipy.stats import norm
 
 class E160_PF:
 
-	def __init__(self, environment, robotWidth, wheel_radius, encoder_resolution):
+	def __init__(self, environment, robotWidth, wheel_radius, encoder_resolution, known):
 		self.particles = []
 		self.environment = environment
 		self.numParticles = 400
@@ -18,6 +18,7 @@ class E160_PF:
 		self.radius = robotWidth/2
 		self.wheel_radius = wheel_radius
 		self.encoder_resolution = encoder_resolution
+		self.known = known
 		self.FAR_READING = 1000
 
 		# PF parameters
@@ -51,9 +52,10 @@ class E160_PF:
 				None'''
 		self.particles = [None for _ in range(self.numParticles)]
 		for i in range(self.numParticles):
-			self.SetRandomStartPos(i)
-			# self.SetKnownStartPos(i)
-
+			if self.known:
+				self.SetKnownStartPos(i)
+			else:
+				self.SetRandomStartPos(i)
 
 	def SetRandomStartPos(self, i):
 		x = self.map_minX + random.random() * (self.map_maxX - self.map_minX)
@@ -101,6 +103,7 @@ class E160_PF:
 
 		self.last_encoder_measurements[0] = encoder_measurements[0]
 		self.last_encoder_measurements[1] = encoder_measurements[1]
+
 
         # end student code here
 
@@ -195,7 +198,7 @@ class E160_PF:
 				XTemp.append(copy.copy(self.particles[i]))
 				XTemp.append(copy.copy(self.particles[i]))
 				XTemp.append(copy.copy(self.particles[i]))
-			elif self.particles[i].weight <= 1.0:
+			else:
 				XTemp.append(copy.copy(self.particles[i]))
 				XTemp.append(copy.copy(self.particles[i]))
 				XTemp.append(copy.copy(self.particles[i]))
