@@ -7,8 +7,8 @@ def random_experiments():
     # set time step size in seconds
     deltaT = 0.1
 
-    points_file_name = 'Log/random_points.txt'
-    data_file_name = 'Log/random_data.txt'
+    points_file_name = 'Log/random_points2.txt'
+    data_file_name = 'Log/random_data2.txt'
 
     for i in range(100):
 
@@ -56,8 +56,8 @@ def known_experiments():
     # set time step size in seconds
     deltaT = 0.1
 
-    points_file_name = 'Log/known_points.txt'
-    data_file_name = 'Log/known_data.txt'
+    points_file_name = 'Log/known_points2.txt'
+    data_file_name = 'Log/known_data2.txt'
 
     for i in range(100):
 
