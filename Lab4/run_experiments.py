@@ -3,6 +3,14 @@ import random
 import time
 from E160_environment import *
 
+def angle_wrap(a):
+    while a > math.pi:
+        a = a - 2*math.pi
+    while a < -math.pi:
+        a = a + 2*math.pi
+
+    return a
+
 def random_experiments():
     # set time step size in seconds
     deltaT = 0.1
@@ -13,7 +21,7 @@ def random_experiments():
     for i in range(8):
 
         angle = float(i * math.pi / 4)
-        angle = r.angle_wrap(angle)
+        angle = angle_wrap(angle)
         d = float(0.25)
 
         x_des = d * math.cos(angle)
@@ -66,7 +74,7 @@ def known_experiments():
     for i in range(8):
 
         angle = float(i * math.pi / 4)
-        angle = r.angle_wrap(angle)
+        angle = angle_wrap(angle)
         d = float(0.25)
 
         x_des = d * math.cos(angle)
