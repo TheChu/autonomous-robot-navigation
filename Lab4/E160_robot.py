@@ -179,10 +179,8 @@ class E160_robot:
 
                 delta_theta = self.state_des.theta - self.state_est.theta
                 delta_theta = self.angle_wrap(delta_theta)
-                print delta_theta
 
                 if math.fabs(delta_theta) < self.epsilon2:
-                    print "Tracked: ", math.fabs(delta_theta), self.epsilon2
                     self.point_tracked = True
                     self.point_reached = False
                     desiredWheelSpeedL = 0
