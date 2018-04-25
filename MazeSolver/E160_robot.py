@@ -41,10 +41,12 @@ class E160_robot:
         self.Kbeta = -1.0#-0.5
         self.Kp = 2.0
         self.max_velocity = 0.05
+        self.max_wheel_speed = 70
+        self.min_wheel_speed = 20
         self.point_tracked = True
         self.encoder_per_sec_to_rad_per_sec = 10
-        self.epsilon = 0.01
-        self.epsilon2 = 0.005
+        self.epsilon = 0.05
+        self.epsilon2 = 0.1
         self.error = 0.08
         self.min_rotation = 0.05
         self.max_rotation = 2
@@ -181,13 +183,22 @@ class E160_robot:
 
                 else:
                     desiredW = self.Kp * delta_theta
-                    if math.fabs(desiredW) < self.min_rotation:
-                        desiredW = self.sign(desiredW) * self.min_rotation
-                    elif math.fabs(desiredW) > self.max_rotation:
-                        desiredW = self.sign(desiredW) * self.max_rotation
+                    # if math.fabs(desiredW) < self.min_rotation:
+                    #     desiredW = self.sign(desiredW) * self.min_rotation
+                    # elif math.fabs(desiredW) > self.max_rotation:
+                    #     desiredW = self.sign(desiredW) * self.max_rotation
                     desiredWheelSpeedL = self.encoder_per_sec_to_rad_per_sec * desiredW * self.radius / self.wheel_radius
                     desiredWheelSpeedR = -self.encoder_per_sec_to_rad_per_sec * desiredW * self.radius / self.wheel_radius
 
+                    if desiredW != 0:
+                        # Prevent robot from not moving
+                        ratio = desiredWheelSpeedL / desiredWheelSpeedR
+                        if math.fabs(desiredWheelSpeedL) < math.fabs(desiredWheelSpeedR):
+                            desiredWheelSpeedL = self.sign(desiredWheelSpeedL) * self.min_wheel_speed
+                            desiredWheelSpeedR = desiredWheelSpeedL / ratio
+                        else:
+                            desiredWheelSpeedR = self.sign(desiredWheelSpeedR) * self.min_wheel_speed
+                            desiredWheelSpeedL = desiredWheelSpeedR * ratio
             else:
 
                 alpha = -self.state_est.theta + math.atan2(delta_y, delta_x)
@@ -208,15 +219,36 @@ class E160_robot:
                 desiredV = self.Kpho * pho
                 if goalBehind:
                     desiredV = -desiredV
-
-                if math.fabs(desiredV) > self.max_velocity:
-                    desiredV = self.sign(desiredV) * self.max_velocity
+                #
+                # if math.fabs(desiredV) > self.max_velocity:
+                #     desiredV = self.sign(desiredV) * self.max_velocity
 
                 desiredW = self.Kalpha * alpha + self.Kbeta * beta
 
                 # convertRatio = (self.encoder_resolution / (2 * math.pi * self.encoder_per_sec_to_rad_per_sec))
                 desiredWheelSpeedL = self.encoder_per_sec_to_rad_per_sec * (desiredW * self.radius + desiredV) / self.wheel_radius
                 desiredWheelSpeedR = self.encoder_per_sec_to_rad_per_sec * (desiredV - desiredW * self.radius) / self.wheel_radius
+
+                if desiredV != 0:
+                    # maxWheelSpeed = self.encoder_per_sec_to_rad_per_sec * self.max_velocity / self.wheel_radius
+                    # Prevent robot from not moving
+                    if (math.fabs(desiredWheelSpeedL) < self.min_wheel_speed) or (math.fabs(desiredWheelSpeedR) < self.min_wheel_speed):
+                        ratio = desiredWheelSpeedL / desiredWheelSpeedR
+                        if math.fabs(desiredWheelSpeedL) < math.fabs(desiredWheelSpeedR):
+                            desiredWheelSpeedL = self.sign(desiredWheelSpeedL) * self.min_wheel_speed
+                            desiredWheelSpeedR = desiredWheelSpeedL / ratio
+                        else:
+                            desiredWheelSpeedR = self.sign(desiredWheelSpeedR) * self.min_wheel_speed
+                            desiredWheelSpeedL = desiredWheelSpeedR * ratio
+                    # Prevent robot from moving too fast
+                    elif (math.fabs(desiredWheelSpeedL) > self.max_wheel_speed) or (math.fabs(desiredWheelSpeedR) > self.max_wheel_speed):
+                        ratio = desiredWheelSpeedL / desiredWheelSpeedR
+                        if math.fabs(desiredWheelSpeedL) > math.fabs(desiredWheelSpeedR):
+                            desiredWheelSpeedL = self.sign(desiredWheelSpeedL) * self.max_wheel_speed
+                            desiredWheelSpeedR = desiredWheelSpeedL / ratio
+                        else:
+                            desiredWheelSpeedR = self.sign(desiredWheelSpeedR) * self.max_wheel_speed
+                            desiredWheelSpeedL = desiredWheelSpeedR * ratio
 
         # the desired point has been tracked, so don't move
         else:
@@ -246,7 +278,7 @@ class E160_robot:
             RPWM = int(abs(R))
             LPWM = int(abs(L))
 
-            command = '$M ' + str(LDIR) + ' ' + str(LPWM) + ' ' + str(RDIR) + ' ' + str(RPWM) + '@'
+            command = '$M ' + str(RDIR) + ' ' + str(RPWM) + ' ' + str(LDIR) + ' ' + str(LPWM) + '@'
             self.environment.xbee.tx(dest_addr = self.address, data = command)
 
 

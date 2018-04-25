@@ -13,7 +13,7 @@ class E160_environment:
     def __init__(self, maze = [], file_name = False):
         self.width = 2.0
         self.height = 1.2
-        self.cell_length = 0.3
+        self.cell_length = 0.5
 
         self.maze = E160_maze(maze)
 
@@ -26,7 +26,7 @@ class E160_environment:
                                          0.5 + end[1] * self.cell_length], slope))
 
         # create vars for hardware vs simulation
-        self.robot_mode = "SIMULATION MODE"#"SIMULATION MODE" or "HARDWARE MODE"
+        self.robot_mode = "HARDWARE MODE"#"SIMULATION MODE" or "HARDWARE MODE"
         self.control_mode = "AUTONOMOUS CONTROL MODE"
         self.track_mode = "PATH MODE"#"POINT MODE" or "PATH MODE"
 
