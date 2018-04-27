@@ -23,7 +23,7 @@ DEBUG_FILTER = False
 DEBUG_BRIGHT = False
 DEBUG_LOCALIZE = True
 DEBUG_BLUE = False
-DEBUG_RED = True
+DEBUG_RED = False
 TRACKING_THRESHOLD = 140
 BLUE_GRAY_THRESHOLD = 40
 CIRCLE_DIAMETER_PIXELS = 50
@@ -294,7 +294,6 @@ def findRedSpot(img):
     # right
     cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
         cv2.CHAIN_APPROX_SIMPLE)
-    print cnts
     cnts = cnts[0] if imutils.is_cv2() else cnts[1]
     cnts = contours.sort_contours(cnts)[0]
 
@@ -329,8 +328,10 @@ def localizeBot(color, thresh):
     #circled = findCircle(no_blue)        #No luck
     #circled = findBlob(no_blue)          #No luck
     #circled = findContour(no_blue)       #No luck
-    cirlced = findRedSpot(color)          #Not Necessary
+    # circled = findRedSpot(color)          #Not Necessary
+    _, _, bot_pos = getMaze()
     if DEBUG_LOCALIZE:
+        print bot_pos
         print state
     return state
 
@@ -343,11 +344,11 @@ def main():
     while(DEBUG_WEBCAM):
         webcamTest()
 
-    grid_arr, corners = getMaze()
+    grid_arr, corners, bot_pos = getMaze()
 
     while(1):
         frame = photoBot()                           # Get image from webcam
-        color,thresh = filterFrame(frame, corners)   # Crops and thresholds image
+        color, thresh = filterFrame(frame, corners)   # Crops and thresholds image
         [x, y, theta] = localizeBot(color, thresh)   # TODO
 
 if __name__ == '__main__':
