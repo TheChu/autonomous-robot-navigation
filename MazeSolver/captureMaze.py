@@ -42,7 +42,7 @@ WALL_INTENSITY_THRESHOLD = 75
 STRIP_WIDTH_FACTOR = 10
 STRIP_HEIGHT_FACTOR = 10
 
-url = "http://134.173.136.247:8080/shot.jpg"
+url = "http://134.173.24.86:8080/shot.jpg"
 
 RED_BOUND_LOWER = [5, 5, 75]
 RED_BOUND_UPPER = [70, 70, 250]
@@ -208,7 +208,11 @@ def isolateMaze():
             cv2.imshow("Orig", imC)
 
         # show the roi image
-        roi = imgCopy[corners[0][1]:corners[1][1], corners[0][0]:corners[1][0]]
+        if (len(corners) == 3):
+            roi = imgCopy[corners[0][1]:corners[2][1], corners[0][0]:corners[2][0]]
+        else:
+            roi = imgCopy[corners[0][1]:corners[1][1], corners[0][0]:corners[1][0]]
+
         if DEBUG_CROP:
             imR = cv2.resize(roi, (640,340))
             cv2.imshow("Cropped", imR)
@@ -422,7 +426,7 @@ def printMaze(maze_name, maze):
 
 def getMaze():
 
-    maze_img, corners = isolateMaze()               # Crop maze
+    maze_img, corners = isolateMaze()      # Crop maze, get bot location
 
     fltr_maze_img = photoMaze(maze_img)    # Filter maze image
 
