@@ -22,7 +22,7 @@ from copy import copy, deepcopy
 import imutils
 from imutils import contours
 from skimage import measure
-from math import atan2, degrees
+from math import atan2, degrees, pi
 ################################################################################
 #############################  PARAMETERS  #####################################
 ################################################################################
@@ -43,7 +43,7 @@ STRIP_WIDTH_FACTOR = 10
 STRIP_HEIGHT_FACTOR = 10
 RADIUS_CUTOFF_PIXELS = 30
 
-url = "http://134.173.29.70:8080/shot.jpg"
+url = "http://134.173.220.177:8080/shot.jpg"
 #                   G   B   R
 RED_BOUND_LOWER = [5, 5, 75]
 RED_BOUND_UPPER = [70, 70, 250]

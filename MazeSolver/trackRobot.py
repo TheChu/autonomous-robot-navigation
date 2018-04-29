@@ -21,7 +21,7 @@ DEBUG_WEBCAM = False
 DEBUG_PHOTO = False
 DEBUG_FILTER = False
 DEBUG_BRIGHT = False
-DEBUG_LOCALIZE = True
+DEBUG_LOCALIZE = False
 DEBUG_BLUE = False
 DEBUG_RED = False
 TRACKING_THRESHOLD = 140
@@ -315,6 +315,13 @@ def findRedSpot(img):
 
     k = cv2.waitKey(1) & 0xff
 
+def angle_wrap(a):
+    while a > pi:
+        a = a - 2*pi
+    while a < -pi:
+        a = a + 2*pi
+    return a
+
 """
 Function: localizeBot
 In: preprocessed maze image
@@ -322,7 +329,6 @@ Out: list of robot x, y, and theta
 Description: Returns the robot state
 """
 def localizeBot(color, thresh):
-    state = [0, 0, 0]
     #no_blue = removeBlue(color, thresh)
     #circled = findBrightestSpot(no_blue) #No luck
     #circled = findCircle(no_blue)        #No luck
@@ -332,11 +338,12 @@ def localizeBot(color, thresh):
     _, _, bot_spots = getMaze()
     x_dist = bot_spots[0][0] - bot_spots[1][0]
     y_dist = bot_spots[0][1] - bot_spots[1][1]
-    angle = (degrees(atan2(y_dist, x_dist)) - 180) * -1
+    angle = angle_wrap(((atan2(y_dist, x_dist)) - pi) * -1)
     if DEBUG_LOCALIZE:
         print bot_spots
         print x_dist, y_dist
-        print angle
+        print degrees(angle)
+    state = [bot_spots[0][0], bot_spots[0][1], angle]
     return state
 
 ################################################################################
@@ -352,8 +359,9 @@ def main():
 
     while(1):
         frame = photoBot()                           # Get image from webcam
-        color, thresh = filterFrame(frame, corners)   # Crops and thresholds image
-        [x, y, theta] = localizeBot(color, thresh)   # TODO
+        color, thresh = filterFrame(frame, corners)  # Crops and thresholds image
+        [x, y, theta] = localizeBot(color, thresh)   # Get x, y, and theta
+        print x, y, degrees(theta)
 
 if __name__ == '__main__':
   main()
