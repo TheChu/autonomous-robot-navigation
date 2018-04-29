@@ -322,6 +322,17 @@ def angle_wrap(a):
         a = a + 2*pi
     return a
 
+def getPixelPos(bot_spots):
+    x_dist = bot_spots[0][0] - bot_spots[1][0]
+    y_dist = bot_spots[0][1] - bot_spots[1][1]
+    angle = angle_wrap(((atan2(y_dist, x_dist)) - pi) * -1)
+    if DEBUG_LOCALIZE:
+        print bot_spots
+        print x_dist, y_dist
+        print degrees(angle)
+    state = (bot_spots[0][0], bot_spots[0][1], angle)
+    return state
+
 """
 Function: localizeBot
 In: preprocessed maze image
@@ -336,14 +347,7 @@ def localizeBot(color, thresh):
     #circled = findContour(no_blue)       #No luck
     # circled = findRedSpot(color)        #Not Necessary
     _, _, bot_spots = getMaze()
-    x_dist = bot_spots[0][0] - bot_spots[1][0]
-    y_dist = bot_spots[0][1] - bot_spots[1][1]
-    angle = angle_wrap(((atan2(y_dist, x_dist)) - pi) * -1)
-    if DEBUG_LOCALIZE:
-        print bot_spots
-        print x_dist, y_dist
-        print degrees(angle)
-    state = [bot_spots[0][0], bot_spots[0][1], angle]
+    state = getPixelPos(bot_spots)
     return state
 
 ################################################################################
@@ -355,12 +359,13 @@ def localizeBot(color, thresh):
 #     while(DEBUG_WEBCAM):
 #         webcamTest()
 #
-#     grid_arr, corners, bot_pos = getMaze()
+#     grid_arr, corners, bot_spots = getMaze()
 #
 #     while(1):
 #         frame = photoBot()                           # Get image from webcam
-#         color, thresh = filterFrame(frame, corners)   # Crops and thresholds image
-#         [x, y, theta] = localizeBot(color, thresh)   # TODO
+#         color, thresh = filterFrame(frame, corners)  # Crops and thresholds image
+#         [x, y, theta] = localizeBot(color, thresh)   # Get x, y, and theta
+#         print x, y, degrees(theta)
 #
 # if __name__ == '__main__':
-  # main()
+#   main()

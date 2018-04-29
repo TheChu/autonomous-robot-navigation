@@ -5,12 +5,13 @@ import os.path
 
 class E160_robot:
 
-    def __init__(self, environment, address, robot_id, bot_pos = [], file_name = False):
+    def __init__(self, environment, address, robot_id, bot_pos = (), file_name = False):
         self.environment = environment
         self.state_est = E160_state()
         if bot_pos:
-            self.state_est.set_state(bot_pos[0],bot_pos[1],0)
-        self.state_est.set_state(0,0,0)
+            self.state_est.set_state(*bot_pos)
+        else:
+            self.state_est.set_state(0,0,0)
         self.state_des = E160_state()
         self.state_des.set_state(0,0,0)
         #self.v = 0.05
@@ -57,13 +58,14 @@ class E160_robot:
         self.instructions = self.translate_instructions(instructions)
 
 
-    def update(self, deltaT):
+    def update(self, deltaT, bot_pos):
 
         # get sensor measurements
         self.encoder_measurements, self.range_measurements = self.update_sensor_measurements(deltaT)
 
         # localize
-        self.state_est = self.localize(self.state_est, self.encoder_measurements, self.range_measurements)
+        # self.state_est = self.localize(self.state_est, self.encoder_measurements, self.range_measurements)
+        self.state_est.set_state(*bot_pos)
 
         # call motion planner
         #self.motion_planner.update_plan()

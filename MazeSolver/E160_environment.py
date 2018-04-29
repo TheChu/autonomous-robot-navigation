@@ -10,19 +10,16 @@ from xbee import XBee
 class E160_environment:
 
 
-    def __init__(self, maze = [], corners = [], bot_pos = [], file_name = False):
+    def __init__(self, maze = [], corners = [], pixel_pos = (), file_name = False):
         self.width = 2.0
         self.height = 1.2
         self.cell_length = 0.5
 
-        topLeftCorner = corners[0]
-        bottomRightCorner = corners[1]
+        self.top_left_corner = corners[0]
+        self.bottom_right_corner = corners[1]
 
-        pixelWidth = math.fabs(bottomRightCorner[0] - topLeftCorner[0])
-        pixelHeight = math.fabs(bottomRightCorner[1] - topLeftCorner[1])
-
-        botActualPos = [(-self.width / 2) + (bot_pos[0] - topLeftCorner[0]) * (self.width / pixelWidth),
-                        (self.height / 2) - (bot_pos[1] - topLeftCorner[1]) * (self.height / pixelHeight)]
+        self.pixel_width = self.bottom_right_corner[0] - self.top_left_corner[0]
+        self.pixel_height = self.bottom_right_corner[1] - self.top_left_corner[1]
 
         self.maze = E160_maze(maze)
 
@@ -53,9 +50,17 @@ class E160_environment:
         self.robots = []
         for i in range (0,self.num_robots):
 
+            botActualPos = self.get_pos_from_pixel_pos(pixel_pos)
+
             # TODO: assign different address to each bot
             r = E160_robot(self, '\x00\x0C', i, botActualPos, file_name)
             self.robots.append(r)
+
+    def get_pos_from_pixel_pos(self, pixel_pos):
+        x = (-self.width / 2) + (pixel_pos[0] - self.top_left_corner[0]) * (self.width / self.pixel_width)
+        y = (self.height / 2) - (pixel_pos[1] - self.top_left_corner[1]) * (self.height / self.pixel_height)
+        theta = pixel_pos[2]
+        return (x, y, theta)
 
     def update_robots(self, deltaT, bot_pos):
 
@@ -63,7 +68,7 @@ class E160_environment:
         for r in self.robots:
 
             # set the control actuation
-            r.update(deltaT)
+            r.update(deltaT, bot_pos)
 
 
     def log_data(self):
