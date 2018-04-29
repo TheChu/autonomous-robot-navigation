@@ -22,7 +22,7 @@ from copy import copy, deepcopy
 import imutils
 from imutils import contours
 from skimage import measure
-
+from math import atan2, degrees
 ################################################################################
 #############################  PARAMETERS  #####################################
 ################################################################################
@@ -41,9 +41,10 @@ MAZE_CELLS_HEIGHT = 4
 WALL_INTENSITY_THRESHOLD = 75
 STRIP_WIDTH_FACTOR = 10
 STRIP_HEIGHT_FACTOR = 10
+RADIUS_CUTOFF_PIXELS = 30
 
-url = "http://134.173.208.1:8080/shot.jpg"
-
+url = "http://134.173.29.70:8080/shot.jpg"
+#                   G   B   R
 RED_BOUND_LOWER = [5, 5, 75]
 RED_BOUND_UPPER = [70, 70, 250]
 
@@ -194,11 +195,16 @@ def isolateMaze():
         cnts = contours.sort_contours(cnts)[0]
 
         corners = []
+        bot_spots = [0, 0]
         # loop over the contours
         for (i, c) in enumerate(cnts):
             # draw the bright spot on the image
             (x, y, w, h) = cv2.boundingRect(c)
             ((cX, cY), radius) = cv2.minEnclosingCircle(c)
+            if radius > RADIUS_CUTOFF_PIXELS:
+                bot_spots[0] = [int(cX), int(cY)]
+            elif cX > 10 and cX < 1280:
+                bot_spots[1] = [int(cX), int(cY)]
             cv2.circle(imgCopy, (int(cX), int(cY)), int(radius), (0, 0, 255), 3)
             corners.append([int(cX), int(cY)])
 
@@ -215,7 +221,7 @@ def isolateMaze():
         else:
             roi = imgCopy
 
-        bot_pos = corners.pop(1) if (len(corners) == 3) else None
+        #bot_pos = corners.pop(1) if (len(corners) == 3) else None
 
         if DEBUG_CROP:
             imR = cv2.resize(roi, (640,340))
@@ -224,7 +230,7 @@ def isolateMaze():
         k = cv2.waitKey(1) & 0xff
 
         if not DEBUG_CROP:
-            return roi, corners, bot_pos
+            return roi, corners, bot_spots
 
 """
 Function: photoMaze

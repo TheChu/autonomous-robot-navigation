@@ -328,11 +328,15 @@ def localizeBot(color, thresh):
     #circled = findCircle(no_blue)        #No luck
     #circled = findBlob(no_blue)          #No luck
     #circled = findContour(no_blue)       #No luck
-    # circled = findRedSpot(color)          #Not Necessary
-    _, _, bot_pos = getMaze()
+    # circled = findRedSpot(color)        #Not Necessary
+    _, _, bot_spots = getMaze()
+    x_dist = bot_spots[0][0] - bot_spots[1][0]
+    y_dist = bot_spots[0][1] - bot_spots[1][1]
+    angle = (degrees(atan2(y_dist, x_dist)) - 180) * -1
     if DEBUG_LOCALIZE:
-        print bot_pos
-        print state
+        print bot_spots
+        print x_dist, y_dist
+        print angle
     return state
 
 ################################################################################
@@ -344,7 +348,7 @@ def main():
     while(DEBUG_WEBCAM):
         webcamTest()
 
-    grid_arr, corners, bot_pos = getMaze()
+    grid_arr, corners, bot_spots = getMaze()
 
     while(1):
         frame = photoBot()                           # Get image from webcam
