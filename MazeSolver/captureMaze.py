@@ -31,7 +31,7 @@ from math import atan2, degrees, pi
 THRESHOLD = 140
 THRESHOLD_CORNERS = 20
 MAX_VALUE = 255
-DEBUG_CROP = False
+DEBUG_CROP = True
 DEBUG  = False
 DEBUG_THRESHOLD = False
 DEBUG_THRESHOLD_MILLIS = 20000
@@ -228,6 +228,8 @@ def isolateMaze():
             cv2.imshow("Cropped", imR)
 
         k = cv2.waitKey(1) & 0xff
+
+        i += 1
 
         if not DEBUG_CROP:
             return roi, corners, bot_spots

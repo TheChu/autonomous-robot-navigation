@@ -10,10 +10,19 @@ from xbee import XBee
 class E160_environment:
 
 
-    def __init__(self, maze = [], file_name = False):
+    def __init__(self, maze = [], corners = [], bot_pos = [], file_name = False):
         self.width = 2.0
         self.height = 1.2
         self.cell_length = 0.5
+
+        topLeftCorner = corners[0]
+        bottomRightCorner = corners[1]
+
+        pixelWidth = math.fabs(bottomRightCorner[0] - topLeftCorner[0])
+        pixelHeight = math.fabs(bottomRightCorner[1] - topLeftCorner[1])
+
+        botActualPos = [(-self.width / 2) + (bot_pos[0] - topLeftCorner[0]) * (self.width / pixelWidth),
+                        (self.height / 2) - (bot_pos[1] - topLeftCorner[1]) * (self.height / pixelHeight)]
 
         self.maze = E160_maze(maze)
 
@@ -27,7 +36,7 @@ class E160_environment:
 
         # create vars for hardware vs simulation
         self.robot_mode = "HARDWARE MODE"#"SIMULATION MODE" or "HARDWARE MODE"
-        self.control_mode = "AUTONOMOUS CONTROL MODE"
+        self.control_mode = "MANUAL CONTROL MODE"
         self.track_mode = "PATH MODE"#"POINT MODE" or "PATH MODE"
 
         # setup xbee communication
@@ -45,10 +54,10 @@ class E160_environment:
         for i in range (0,self.num_robots):
 
             # TODO: assign different address to each bot
-            r = E160_robot(self, '\x00\x0C', i, file_name)
+            r = E160_robot(self, '\x00\x0C', i, botActualPos, file_name)
             self.robots.append(r)
 
-    def update_robots(self, deltaT):
+    def update_robots(self, deltaT, bot_pos):
 
         # loop over all robots and update their state
         for r in self.robots:

@@ -5,12 +5,14 @@ import os.path
 
 class E160_robot:
 
-    def __init__(self, environment, address, robot_id, file_name = False):
+    def __init__(self, environment, address, robot_id, bot_pos = [], file_name = False):
         self.environment = environment
         self.state_est = E160_state()
-        self.state_est.set_state(-0.75,0.35,0)
+        if bot_pos:
+            self.state_est.set_state(bot_pos[0],bot_pos[1],0)
+        self.state_est.set_state(0,0,0)
         self.state_des = E160_state()
-        self.state_des.set_state(-0.75,0.35,0)
+        self.state_des.set_state(0,0,0)
         #self.v = 0.05
         #self.w = 0.1
         self.R = 0

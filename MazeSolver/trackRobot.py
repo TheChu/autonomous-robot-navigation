@@ -350,18 +350,17 @@ def localizeBot(color, thresh):
 ################################  MAIN  ########################################
 ################################################################################
 
-def main():
-
-    while(DEBUG_WEBCAM):
-        webcamTest()
-
-    grid_arr, corners, bot_spots = getMaze()
-
-    while(1):
-        frame = photoBot()                           # Get image from webcam
-        color, thresh = filterFrame(frame, corners)  # Crops and thresholds image
-        [x, y, theta] = localizeBot(color, thresh)   # Get x, y, and theta
-        print x, y, degrees(theta)
-
-if __name__ == '__main__':
-  main()
+# def main():
+#
+#     while(DEBUG_WEBCAM):
+#         webcamTest()
+#
+#     grid_arr, corners, bot_pos = getMaze()
+#
+#     while(1):
+#         frame = photoBot()                           # Get image from webcam
+#         color, thresh = filterFrame(frame, corners)   # Crops and thresholds image
+#         [x, y, theta] = localizeBot(color, thresh)   # TODO
+#
+# if __name__ == '__main__':
+  # main()
