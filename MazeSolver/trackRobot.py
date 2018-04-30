@@ -193,7 +193,7 @@ def findRedSpot(img):
             bot_spots[1] = [int(cX), int(cY)]
         cv2.circle(imgCopy, (int(cX), int(cY)), int(radius), (0, 0, 255), 3)
 
-    if bot_spots[1]= 0:
+    if bot_spots[1] == 0:
         bot_spots[1] = LAST_BOT_SPOTS[1]
 
     # show the output image
@@ -202,6 +202,7 @@ def findRedSpot(img):
         cv2.imshow("Orig", imC)
         k = cv2.waitKey(1) & 0xff
 
+    global LAST_BOT_SPOTS
     LAST_BOT_SPOTS = bot_spots
 
     return bot_spots

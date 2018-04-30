@@ -50,7 +50,7 @@ class E160_robot:
         self.point_tracked = True
         self.point_reached = False
         self.encoder_per_sec_to_rad_per_sec = 10
-        self.epsilon = 0.05
+        self.epsilon = 0.1
         self.epsilon2 = 0.1
         self.error = 0.08
         self.min_rotation = 0.05
@@ -60,6 +60,7 @@ class E160_robot:
         goal = (4,3,2)
         instructions = self.environment.maze.aStarSearch(start, goal)
         self.instructions = self.translate_instructions(instructions)
+        print self.instructions
 
 
     def update(self, deltaT, bot_pos):
