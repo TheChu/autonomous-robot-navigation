@@ -214,8 +214,8 @@ def isolateMaze():
             cv2.imshow("Orig", imC)
 
         # show the roi image
-        if (len(corners) == 3):
-            roi = imgCopy[corners[0][1]:corners[2][1], corners[0][0]:corners[2][0]]
+        if (len(corners) == 4):
+            roi = imgCopy[corners[0][1]:corners[3][1], corners[0][0]:corners[3][0]]
         elif (len(corners) == 2):
             roi = imgCopy[corners[0][1]:corners[1][1], corners[0][0]:corners[1][0]]
         else:
