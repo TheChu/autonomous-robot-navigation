@@ -40,8 +40,7 @@ BLUE_BOUND_UPPER = [255, 255, 90]
 RED_BOUND_LOWER = [5, 5, 75]
 RED_BOUND_UPPER = [70, 70, 250]
 
-# SimpleBlobDetector parameters.
-PARAMS = cv2.SimpleBlobDetector_Params()
+LAST_BOT_SPOTS = []
 
 ################################################################################
 ##########################  HELPER FUNCTIONS  ##################################
