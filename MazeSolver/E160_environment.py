@@ -13,7 +13,8 @@ class E160_environment:
     def __init__(self, maze = [], corners = [], pixel_pos = (), file_name = False):
         self.width = 2.2
         self.height = 1.7
-        self.cell_length = 0.4
+        self.cell_width = 0.45
+        self.cell_height = 0.4
 
         self.top_left_corner = corners[0]
         self.bottom_right_corner = corners[3]
@@ -26,10 +27,10 @@ class E160_environment:
         # set up walls, putting top left point first
         self.walls = []
         for start, end, slope in self.maze.walls:
-            self.walls.append(E160_wall([(-self.width / 2 + 0.2) + start[0] * self.cell_length,
-                                         (self.height / 2 - 0.2) + start[1] * self.cell_length,
-                                         (-self.width / 2 + 0.2) + end[0] * self.cell_length,
-                                         (self.height / 2 - 0.2) + end[1] * self.cell_length], slope))
+            self.walls.append(E160_wall([(-self.width / 2 + 0.2) - self.top_left_corner[0] * (self.width / self.pixel_width) + start[0] * self.cell_width,
+                                         (self.height / 2 - 0.2) + self.top_left_corner[1] * (self.width / self.pixel_width) + start[1] * self.cell_height,
+                                         (-self.width / 2 + 0.2) - self.top_left_corner[0] * (self.width / self.pixel_width) + end[0] * self.cell_width,
+                                         (self.height / 2 - 0.2) + self.top_left_corner[1] * (self.width / self.pixel_width) + end[1] * self.cell_height], slope))
 
         # create vars for hardware vs simulation
         self.robot_mode = "HARDWARE MODE"#"SIMULATION MODE" or "HARDWARE MODE"

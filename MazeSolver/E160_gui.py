@@ -12,7 +12,9 @@ def main():
     #                [[0, 0, 1, 1], [1, 0, 1, 0], [0, 1, 1, 0], [0, 1, 1, 1], [0, 1, 1, 1]]]
 
     grid_arr, corners, bot_spots = getMaze()
-    pixelPos = getState(bot_spots)
+    frame = photoBot()                           # Get image from webcam
+    color, thresh = filterFrame(frame, corners)   # Crops and thresholds image
+    pixelPos = localizeBot(color, thresh)
 
     # instantiate robot navigation classes
     environment = E160_environment(grid_arr, corners, pixelPos)

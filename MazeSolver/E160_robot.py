@@ -157,8 +157,8 @@ class E160_robot:
             isOriented, direction = self.instructions.pop(0)
             if isOriented:
                 theta_des = self.state_des.theta
-                x_des = self.state_des.x + self.environment.cell_length * math.cos(theta_des)
-                y_des = self.state_des.y + self.environment.cell_length * math.sin(theta_des)
+                x_des = self.state_des.x + self.environment.cell_width * math.cos(theta_des)
+                y_des = self.state_des.y + self.environment.cell_height * math.sin(theta_des)
             else:
                 theta_des = direction
                 x_des = self.state_des.x
