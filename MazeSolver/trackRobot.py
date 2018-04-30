@@ -23,7 +23,7 @@ DEBUG_WEBCAM = False
 DEBUG_PHOTO = False
 DEBUG_FILTER = False
 DEBUG_BRIGHT = False
-DEBUG_STATE = False
+DEBUG_STATE = True
 DEBUG_LOCALIZE = False
 DEBUG_BLUE = False
 DEBUG_RED = True
@@ -31,6 +31,8 @@ TRACKING_THRESHOLD = 140
 BLUE_GRAY_THRESHOLD = 40
 CIRCLE_DIAMETER_PIXELS = 50
 TRACKING_NUMPIXELS_THRESHOLD = 200
+PIXEL_WIDTH_MIN = 10
+PIXEL_WIDTH_MAX = 1605
 #                   G   B   R
 BLUE_BOUND_LOWER = [60, 20, 0]
 BLUE_BOUND_UPPER = [255, 255, 90]
@@ -180,7 +182,7 @@ def findRedSpot(img):
     cnts = cnts[0] if imutils.is_cv2() else cnts[1]
     cnts = contours.sort_contours(cnts)[0]
 
-    bot_spots = [[0,0],[0,0]]
+    bot_spots = [0, 0]
     # loop over the contours
     for (i, c) in enumerate(cnts):
         # draw the bright spot on the image
@@ -188,7 +190,7 @@ def findRedSpot(img):
         ((cX, cY), radius) = cv2.minEnclosingCircle(c)
         if radius > RADIUS_CUTOFF_PIXELS:
             bot_spots[0] = [int(cX), int(cY)]
-        elif cX > 10 and cX < 1280:
+        elif cX > PIXEL_WIDTH_MIN and cX < PIXEL_WIDTH_MAX:
             bot_spots[1] = [int(cX), int(cY)]
         cv2.circle(imgCopy, (int(cX), int(cY)), int(radius), (0, 0, 255), 3)
 
@@ -223,6 +225,7 @@ def getState(bot_spots):
         print bot_spots
         print x_dist, y_dist
         print degrees(angle)
+        print
     state = (bot_spots[0][0], bot_spots[0][1], angle)
     return state
 
@@ -256,7 +259,7 @@ def main():
         frame = photoBot()                           # Get image from webcam
         color, thresh = filterFrame(frame, corners)  # Crops and thresholds image
         [x, y, theta] = localizeBot(color, thresh)   # Get x, y, and theta
-        print x, y, degrees(theta)
+        #print x, y, degrees(theta)
 
 if __name__ == '__main__':
   main()
