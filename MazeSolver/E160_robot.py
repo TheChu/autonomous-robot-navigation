@@ -8,12 +8,13 @@ class E160_robot:
     def __init__(self, environment, address, robot_id, bot_pos = (), file_name = False):
         self.environment = environment
         self.state_est = E160_state()
+        self.state_des = E160_state()
         if bot_pos:
             self.state_est.set_state(*bot_pos)
+            self.state_des.set_state(*bot_pos)
         else:
             self.state_est.set_state(0,0,0)
-        self.state_des = E160_state()
-        self.state_des.set_state(0,0,0)
+            self.state_des.set_state(0,0,0)
         #self.v = 0.05
         #self.w = 0.1
         self.R = 0
@@ -44,7 +45,7 @@ class E160_robot:
         self.Kbeta = -1.0#-0.5
         self.Kp = 2.0
         self.max_velocity = 0.05
-        self.max_wheel_speed = 70
+        self.max_wheel_speed = 50
         self.min_wheel_speed = 20
         self.point_tracked = True
         self.encoder_per_sec_to_rad_per_sec = 10
@@ -54,7 +55,9 @@ class E160_robot:
         self.min_rotation = 0.05
         self.max_rotation = 2
 
-        instructions = self.environment.maze.aStarSearch((0,0,3), (3,2,2))
+        start = (0,0,1)
+        goal = (4,3,2)
+        instructions = self.environment.maze.aStarSearch(start, goal)
         self.instructions = self.translate_instructions(instructions)
 
 

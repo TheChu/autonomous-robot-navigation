@@ -46,11 +46,11 @@ class E160_maze:
 
         for col in range(w):
             for row in range(h):
-                if (not start) and self.maze[row][col][1]:
+                if (not start) and self.maze[row][col][3]:
                     start = (col, -row)
-                if start and (not self.maze[row][col][1]):
+                if start and (not self.maze[row][col][3]):
                     end = (col, -row)
-                if (row == h - 1) and start and self.maze[row][col][1]:
+                if (row == h - 1) and start and self.maze[row][col][3]:
                     end = (col, -(row + 1))
                 if end and start:
                     self.walls.append((start, end, vslope))
@@ -58,11 +58,11 @@ class E160_maze:
                     end = ()
 
         for row in range(h):
-            if (not start) and self.maze[row][w - 1][3]:
+            if (not start) and self.maze[row][w - 1][1]:
                 start = (w, -row)
-            if start and (not self.maze[row][w - 1][3]):
+            if start and (not self.maze[row][w - 1][1]):
                 end = (w, -row)
-            if (row == h - 1) and start and self.maze[row][w - 1][3]:
+            if (row == h - 1) and start and self.maze[row][w - 1][1]:
                 end = (w, -(row + 1))
             if end and start:
                 self.walls.append((start, end, vslope))
@@ -79,11 +79,11 @@ class E160_maze:
         if moves[0] == 0:
             successors.append((pos[0], pos[1] - 1, math.pi / 2))
         if moves[1] == 0:
-            successors.append((pos[0] - 1, pos[1], math.pi))
+            successors.append((pos[0] + 1, pos[1], 0))
         if moves[2] == 0:
             successors.append((pos[0], pos[1] + 1, -math.pi / 2))
         if moves[3] == 0:
-            successors.append((pos[0] + 1, pos[1], 0))
+            successors.append((pos[0] - 1, pos[1], math.pi))
         return successors
 
     def aStarSearch(self, start, goal):
