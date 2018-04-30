@@ -11,8 +11,8 @@ class E160_environment:
 
 
     def __init__(self, maze = [], corners = [], pixel_pos = (), file_name = False):
-        self.width = 2.0
-        self.height = 1.2
+        self.width = 2.2
+        self.height = 1.7
         self.cell_length = 0.35
 
         self.top_left_corner = corners[0]
@@ -26,14 +26,14 @@ class E160_environment:
         # set up walls, putting top left point first
         self.walls = []
         for start, end, slope in self.maze.walls:
-            self.walls.append(E160_wall([-0.9+ start[0] * self.cell_length,
-                                         0.5 + start[1] * self.cell_length,
-                                         -0.9 + end[0] * self.cell_length,
-                                         0.5 + end[1] * self.cell_length], slope))
+            self.walls.append(E160_wall([(-self.width / 2 + 0.2) + start[0] * self.cell_length,
+                                         (self.height / 2 - 0.2) + start[1] * self.cell_length,
+                                         (-self.width / 2 + 0.2) + end[0] * self.cell_length,
+                                         (self.height / 2 - 0.2) + end[1] * self.cell_length], slope))
 
         # create vars for hardware vs simulation
         self.robot_mode = "HARDWARE MODE"#"SIMULATION MODE" or "HARDWARE MODE"
-        self.control_mode = "MANUAL CONTROL MODE"
+        self.control_mode = "AUTONOMOUS CONTROL MODE"
         self.track_mode = "PATH MODE"#"POINT MODE" or "PATH MODE"
 
         # setup xbee communication
@@ -57,8 +57,8 @@ class E160_environment:
             self.robots.append(r)
 
     def get_pos_from_pixel_pos(self, pixel_pos):
-        x = (-self.width / 2) + (pixel_pos[0] - self.top_left_corner[0]) * (self.width / self.pixel_width)
-        y = (self.height / 2) - (pixel_pos[1] - self.top_left_corner[1]) * (self.height / self.pixel_height)
+        x = (-self.width / 2 + 0.2) + (pixel_pos[0] - self.top_left_corner[0]) * (self.width / self.pixel_width)
+        y = (self.height / 2 - 0.2) - (pixel_pos[1] - self.top_left_corner[1]) * (self.height / self.pixel_height)
         theta = pixel_pos[2]
         return (x, y, theta)
 
