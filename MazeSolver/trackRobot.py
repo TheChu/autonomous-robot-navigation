@@ -2,9 +2,11 @@
 ##############################  NOTES  #######################################
 ################################################################################
 """
-In the process of tracking bot on blue-less image
-"""
+Developed by Charlee Van Eijk and David Chu
 
+This file contains all necessary functions for getting the x,y,theta of the bot
+in pixels and radians, respectively.
+"""
 ################################################################################
 ##############################  IMPORTS  #######################################
 ################################################################################
@@ -24,7 +26,7 @@ DEBUG_BRIGHT = False
 DEBUG_STATE = False
 DEBUG_LOCALIZE = False
 DEBUG_BLUE = False
-DEBUG_RED = False
+DEBUG_RED = True
 TRACKING_THRESHOLD = 140
 BLUE_GRAY_THRESHOLD = 40
 CIRCLE_DIAMETER_PIXELS = 50
@@ -33,45 +35,21 @@ TRACKING_NUMPIXELS_THRESHOLD = 200
 BLUE_BOUND_LOWER = [60, 20, 0]
 BLUE_BOUND_UPPER = [255, 255, 90]
 
-#                   G   B   R
-GREEN_BOUND_LOWER = [100, 0, 0]
-GREEN_BOUND_UPPER = [255, 50, 100]
-
 RED_BOUND_LOWER = [5, 5, 75]
 RED_BOUND_UPPER = [70, 70, 250]
 
 # SimpleBlobDetector parameters.
 PARAMS = cv2.SimpleBlobDetector_Params()
 
-# Change thresholds
-
-PARAMS.minThreshold = 0;
-PARAMS.maxThreshold = 255;
-
-# Filter by Area.
-PARAMS.filterByArea = True
-PARAMS.minArea = 20
-PARAMS.maxArea= 100
-
-# Filter by Circularity
-PARAMS.filterByCircularity = True
-PARAMS.minCircularity = 0.7
-PARAMS.maxCircularity = 1
-
-# Filter by Convexity
-PARAMS.filterByConvexity = False
-PARAMS.minConvexity = 0.87
-PARAMS.maxConvexity = 1
-
-# Filter by Inertia
-PARAMS.filterByInertia = False
-PARAMS.minInertiaRatio = 0.5
-PARAMS.maxInertiaRatio = 1
-
 ################################################################################
 ##########################  HELPER FUNCTIONS  ##################################
 ################################################################################
-
+"""
+Function: webcamTest
+In: none
+Out: none
+Description: Displays image captured by webcam. Used to verify setup is correct.
+"""
 def webcamTest():
     # Get webcam video
     img_resp = requests.get(url)
@@ -144,113 +122,14 @@ def removeBlue(color_img, thresh_img):
         k = cv2.waitKey(1) & 0xff
     return thresh_img
 
+
 """
-Function:
-In:
-Out:
-Description:
+Function: findRedSpot
+In: image
+Out: array of red coordinate positions on bot
+Description: Finds red objects in image, stores their positions, returns thresh_img
+             in an array.
 """
-def findBrightestSpot(img):
-    (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(img)
-    image = img.copy()
-    cv2.circle(image, maxLoc, CIRCLE_DIAMETER_PIXELS, (255, 0, 0), 2)
-    if DEBUG_BRIGHT:
-        image_rsz = cv2.resize(image, (640, 340))
-        cv2.imshow('Brightest Spot', image_rsz)
-        k = cv2.waitKey(1) & 0xff
-    print (minVal, maxVal, minLoc, maxLoc)
-
-def findCircle(img):
-    output = img.copy()
-    # detect circles in the image
-    circles = cv2.HoughCircles(img, cv2.cv.CV_HOUGH_GRADIENT, 1.2, 10)
-
-    # ensure at least some circles were found
-    if circles is not None:
-    	# convert the (x, y) coordinates and radius of the circles to integers
-    	circles = np.round(circles[0, :]).astype("int")
-
-    	# loop over the (x, y) coordinates and radius of the circles
-    	for (x, y, r) in circles:
-    		# draw the circle in the output image, then draw a rectangle
-    		# corresponding to the center of the circle
-    		cv2.circle(output, (x, y), r, (0, 255, 0), 4)
-
-    	# show the output image
-        image_rsz = cv2.resize(img, (640, 340))
-    	cv2.imshow("output", image_rsz)
-        k = cv2.waitKey(1) & 0xff
-
-    return image_rsz
-
-def findBlob(img):
-    # Create a detector with the parameters
-    ver = (cv2.__version__).split('.')
-    # if int(ver[0]) < 3 :
-    #     detector = cv2.SimpleBlobDetector(PARAMS)
-    # else :
-    #     detector = cv2.SimpleBlobDetector_create(PARAMS)
-    detector = cv2.SimpleBlobDetector()
-
-    # Detect blobs.
-    keypoints = detector.detect(img)
-
-    # Draw detected blobs as red circles.
-    # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
-    im_with_keypoints = cv2.drawKeypoints(img, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-
-    # Show keypoints
-    iwk_rsz = cv2.resize(im_with_keypoints, (640,340))
-    cv2.imshow("Keypoints", iwk_rsz)
-    k = cv2.waitKey(1) & 0xff
-
-def findContour(img):
-    # perform a connected component analysis on the thresholded
-    # image, then initialize a mask to store only the "large"
-    # components
-    labels = measure.label(img, neighbors=8, background=0)
-    print len(labels)
-    mask = np.zeros(img.shape, dtype="uint8")
-
-    # loop over the unique components
-    for label in np.unique(labels):
-        # if this is the background label, ignore it
-        if label == 0:
-            continue
-
-        # otherwise, construct the label mask and count the
-        # number of pixels
-        labelMask = np.zeros(img.shape, dtype="uint8")
-        labelMask[labels == label] = 255
-        numPixels = cv2.countNonZero(labelMask)
-
-        # if the number of pixels in the component is sufficiently
-        # large, then add it to our mask of "large blobs"
-        if numPixels > TRACKING_NUMPIXELS_THRESHOLD:
-            mask = cv2.add(mask, labelMask)
-
-    # find the contours in the mask, then sort them from left to
-    # right
-    cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
-        cv2.CHAIN_APPROX_SIMPLE)
-    cnts = cnts[0] if imutils.is_cv2() else cnts[1]
-    cnts = contours.sort_contours(cnts)[0]
-
-    bot = []
-    # loop over the contours
-    for (i, c) in enumerate(cnts):
-        # draw the bright spot on the image
-        (x, y, w, h) = cv2.boundingRect(c)
-        ((cX, cY), radius) = cv2.minEnclosingCircle(c)
-        cv2.circle(img, (int(cX), int(cY)), int(radius), (0, 0, 255), 3)
-        bot.append([int(cX), int(cY)])
-
-    print bot
-    # show the output image
-    if DEBUG_CROP:
-        img_rsz = cv2.resize(img, (640,340))
-        cv2.imshow("Tracked", img_rsz)
-
 def findRedSpot(img):
     # Apply red mask
     lower_red = np.array(RED_BOUND_LOWER, dtype = "uint8")
@@ -328,6 +207,14 @@ def angle_wrap(a):
         a = a + 2*pi
     return a
 
+
+"""
+Function: getState
+In: array of coordinates
+Out: state array
+Description: Calculates bot orientation given coordinates of two reference pointsself.
+             Returns one of the coordinates and angle.
+"""
 def getState(bot_spots):
     x_dist = bot_spots[0][0] - bot_spots[1][0]
     y_dist = bot_spots[0][1] - bot_spots[1][1]
@@ -347,13 +234,7 @@ Description: Returns the robot state
 """
 def localizeBot(color, thresh):
     state = [0,0,0]
-    #no_blue = removeBlue(color, thresh)
-    #circled = findBrightestSpot(no_blue) #No luck
-    #circled = findCircle(no_blue)        #No luck
-    #circled = findBlob(no_blue)          #No luck
-    #circled = findContour(no_blue)       #No luck
-    bot_spots = findRedSpot(color)        #Not Necessary
-    #_, _, bot_spots = getMaze()
+    bot_spots = findRedSpot(color)
     state = getState(bot_spots)
     if DEBUG_LOCALIZE:
         print state

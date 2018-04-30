@@ -4,8 +4,11 @@
 """
 Developed by Charlee Van Eijk and David Chu
 
-Parts of code from the following were used to detect color:
-https://www.pyimagesearch.com/2016/10/31/detecting-multiple-bright-spots-in-an-image-with-python-and-opencv/
+This file contains all necessary functions for getting a 2d array representation
+of a maze captured from an image.
+
+We would like to thank pyimagesearch.com for helpful tutorials on color detection
+and contour detection.
 """
 ################################################################################
 ##############################  IMPORTS  #######################################
