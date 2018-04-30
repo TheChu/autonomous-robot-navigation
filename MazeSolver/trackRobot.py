@@ -21,6 +21,7 @@ DEBUG_WEBCAM = False
 DEBUG_PHOTO = False
 DEBUG_FILTER = False
 DEBUG_BRIGHT = False
+DEBUG_STATE = False
 DEBUG_LOCALIZE = False
 DEBUG_BLUE = False
 DEBUG_RED = False
@@ -106,7 +107,7 @@ Description: Takes a picture of the maze, converts it to grayscale, thresholds i
 """
 def filterFrame(img, corners):
     # img -> grayscale -> thresholded -> gaussian
-    img_crop = img[corners[0][1]:corners[1][1], corners[0][0]:corners[1][0]]
+    img_crop = img[corners[0][1]:corners[-1][1], corners[0][0]:corners[-1][0]]
     im_gray =  cv2.cvtColor(img_crop, cv2.COLOR_BGR2GRAY)
     ret,thresh = cv2.threshold(im_gray,TRACKING_THRESHOLD,MAX_VALUE,cv2.THRESH_BINARY_INV)
     gauss = cv2.GaussianBlur(thresh,(5,5),1)
@@ -256,16 +257,19 @@ def findRedSpot(img):
     upper_red = np.array(RED_BOUND_UPPER, dtype = "uint8")
     mask = cv2.inRange(img, lower_red, upper_red)
     red = cv2.bitwise_and(img, img, mask = mask)
+    imgCopy = img.copy()
 
-    if DEBUG_CROP:
+    if DEBUG_RED:
+        img_rsz = cv2.resize(img, (640, 340))
+        cv2.imshow('og', img_rsz)
         imS = cv2.resize(red, (640,340))
         cv2.imshow('overlay', imS)
+        k = cv2.waitKey(1) & 0xff
 
     im_gray =  cv2.cvtColor(red, cv2.COLOR_BGR2GRAY)
 
     ret,thresh = cv2.threshold(im_gray,THRESHOLD_CORNERS, MAX_VALUE, cv2.THRESH_BINARY)
 
-    k = cv2.waitKey(1) & 0xff
 
     # perform a connected component analysis on the thresholded
     # image, then initialize a mask to store only the "large"
@@ -297,23 +301,25 @@ def findRedSpot(img):
     cnts = cnts[0] if imutils.is_cv2() else cnts[1]
     cnts = contours.sort_contours(cnts)[0]
 
-    red_spots = []
+    bot_spots = [[0,0],[0,0]]
     # loop over the contours
     for (i, c) in enumerate(cnts):
         # draw the bright spot on the image
         (x, y, w, h) = cv2.boundingRect(c)
         ((cX, cY), radius) = cv2.minEnclosingCircle(c)
+        if radius > RADIUS_CUTOFF_PIXELS:
+            bot_spots[0] = [int(cX), int(cY)]
+        elif cX > 10 and cX < 1280:
+            bot_spots[1] = [int(cX), int(cY)]
         cv2.circle(imgCopy, (int(cX), int(cY)), int(radius), (0, 0, 255), 3)
-        red_spots.append([int(cX), int(cY)])
-
-    print red_spots
 
     # show the output image
     if DEBUG_RED:
         imC = cv2.resize(imgCopy, (640,340))
         cv2.imshow("Orig", imC)
+        k = cv2.waitKey(1) & 0xff
 
-    k = cv2.waitKey(1) & 0xff
+    return bot_spots
 
 def angle_wrap(a):
     while a > pi:
@@ -322,11 +328,11 @@ def angle_wrap(a):
         a = a + 2*pi
     return a
 
-def getPixelPos(bot_spots):
+def getState(bot_spots):
     x_dist = bot_spots[0][0] - bot_spots[1][0]
     y_dist = bot_spots[0][1] - bot_spots[1][1]
     angle = angle_wrap(((atan2(y_dist, x_dist)) - pi) * -1)
-    if DEBUG_LOCALIZE:
+    if DEBUG_STATE:
         print bot_spots
         print x_dist, y_dist
         print degrees(angle)
@@ -340,32 +346,36 @@ Out: list of robot x, y, and theta
 Description: Returns the robot state
 """
 def localizeBot(color, thresh):
+    state = [0,0,0]
     #no_blue = removeBlue(color, thresh)
     #circled = findBrightestSpot(no_blue) #No luck
     #circled = findCircle(no_blue)        #No luck
     #circled = findBlob(no_blue)          #No luck
     #circled = findContour(no_blue)       #No luck
-    # circled = findRedSpot(color)        #Not Necessary
-    _, _, bot_spots = getMaze()
-    state = getPixelPos(bot_spots)
+    bot_spots = findRedSpot(color)        #Not Necessary
+    #_, _, bot_spots = getMaze()
+    state = getState(bot_spots)
+    if DEBUG_LOCALIZE:
+        print state
+        print
     return state
 
 ################################################################################
 ################################  MAIN  ########################################
 ################################################################################
 
-# def main():
-#
-#     while(DEBUG_WEBCAM):
-#         webcamTest()
-#
-#     grid_arr, corners, bot_spots = getMaze()
-#
-#     while(1):
-#         frame = photoBot()                           # Get image from webcam
-#         color, thresh = filterFrame(frame, corners)  # Crops and thresholds image
-#         [x, y, theta] = localizeBot(color, thresh)   # Get x, y, and theta
-#         print x, y, degrees(theta)
-#
-# if __name__ == '__main__':
-#   main()
+def main():
+
+    while(DEBUG_WEBCAM):
+        webcamTest()
+
+    grid_arr, corners, bot_spots = getMaze()
+
+    while(1):
+        frame = photoBot()                           # Get image from webcam
+        color, thresh = filterFrame(frame, corners)  # Crops and thresholds image
+        [x, y, theta] = localizeBot(color, thresh)   # Get x, y, and theta
+        print x, y, degrees(theta)
+
+if __name__ == '__main__':
+  main()

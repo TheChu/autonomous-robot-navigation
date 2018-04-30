@@ -34,7 +34,7 @@ MAX_VALUE = 255
 DEBUG_CROP = False
 DEBUG  = False
 DEBUG_THRESHOLD = False
-DEBUG_THRESHOLD_MILLIS = 20000
+DEBUG_THRESHOLD_MILLIS = 40000
 DEBUG_CORRECT = False
 MAZE_CELLS_WIDTH = 5
 MAZE_CELLS_HEIGHT = 4
@@ -160,7 +160,8 @@ def isolateMaze():
             cv2.imshow('crop', imT)
 
         if DEBUG_CROP:
-            cv2.imshow('orig', imgCopy)
+            imgCopy_rsz = cv2.resize(imgCopy, (640, 340))
+            cv2.imshow('orig', imgCopy_rsz)
 
         k = cv2.waitKey(1) & 0xff
 
@@ -193,6 +194,7 @@ def isolateMaze():
         	cv2.CHAIN_APPROX_SIMPLE)
         cnts = cnts[0] if imutils.is_cv2() else cnts[1]
         cnts = contours.sort_contours(cnts)[0]
+
 
         corners = []
         bot_spots = [0, 0]
@@ -343,8 +345,8 @@ def imageToCell(img, row, col):
             cv2.imshow('strip ' + str(i), strips[i])
         cell = [int(cv2.mean(i)[0] > WALL_INTENSITY_THRESHOLD) for i in strips]
         print str((row, col)), "thresh: ", cell, "actual: ", ACTUAL_MAZE[row][col], [cv2.mean(i)[0] for i in strips], cell == ACTUAL_MAZE[row][col]
-        if cell != ACTUAL_MAZE[row][col]:
-            k = cv2.waitKey(DEBUG_THRESHOLD_MILLIS) & 0xff
+        #if cell != ACTUAL_MAZE[row][col]:
+        k = cv2.waitKey(DEBUG_THRESHOLD_MILLIS) & 0xff
 
     cell = [int(cv2.mean(i)[0] > WALL_INTENSITY_THRESHOLD) for i in strips]
 
@@ -462,9 +464,9 @@ def getMaze():
     if DEBUG_CORRECT:
         printMaze('ACTUAL', ACTUAL_MAZE)
         printMaze('RAW', grid_arr)
-        printMaze('CORRECTED', corr_arr)
+        #printMaze('CORRECTED', corr_arr)
         checkMaze('RAW', grid_arr)
-        checkMaze('CORRECTED', corr_arr)
+        #checkMaze('CORRECTED', corr_arr)
 
     cv2.destroyAllWindows()
 
