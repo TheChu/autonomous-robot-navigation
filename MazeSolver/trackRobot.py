@@ -23,10 +23,10 @@ DEBUG_WEBCAM = False
 DEBUG_PHOTO = False
 DEBUG_FILTER = False
 DEBUG_BRIGHT = False
-DEBUG_STATE = True
+DEBUG_STATE = False
 DEBUG_LOCALIZE = False
 DEBUG_BLUE = False
-DEBUG_RED = True
+DEBUG_RED = False
 TRACKING_THRESHOLD = 140
 BLUE_GRAY_THRESHOLD = 40
 CIRCLE_DIAMETER_PIXELS = 50
@@ -194,11 +194,16 @@ def findRedSpot(img):
             bot_spots[1] = [int(cX), int(cY)]
         cv2.circle(imgCopy, (int(cX), int(cY)), int(radius), (0, 0, 255), 3)
 
+    if bot_spots[1]= 0:
+        bot_spots[1] = LAST_BOT_SPOTS[1]
+
     # show the output image
     if DEBUG_RED:
         imC = cv2.resize(imgCopy, (640,340))
         cv2.imshow("Orig", imC)
         k = cv2.waitKey(1) & 0xff
+
+    LAST_BOT_SPOTS = bot_spots
 
     return bot_spots
 
