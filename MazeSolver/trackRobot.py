@@ -42,6 +42,8 @@ RED_BOUND_UPPER = [70, 70, 250]
 
 LAST_BOT_SPOTS = []
 
+PATH_RADIUS = 15
+
 ################################################################################
 ##########################  HELPER FUNCTIONS  ##################################
 ################################################################################
@@ -249,6 +251,19 @@ def localizeBot(color, thresh):
         print
     return state
 
+"""
+Function: drawPath
+In: list of pixel coordinates the robot has visited
+Out: none
+Description: Displays image of robot trajectory.
+"""
+def drawPath(path, color):
+    for coordinate in path:
+        cv2.circle(color,(coordinate[0], coordinate[1]), PATH_RADIUS, (0,0,255), -1)
+    color_rsz = cv2.resize(color, (640,340))
+    cv2.imshow("Path", color_rsz)
+    k = cv2.waitKey(1) & 0xff
+
 ################################################################################
 ################################  MAIN  ########################################
 ################################################################################
@@ -260,10 +275,14 @@ def main():
 
     grid_arr, corners, bot_spots = getMaze()
 
+    path = []
+
     while(1):
         frame = photoBot()                           # Get image from webcam
         color, thresh = filterFrame(frame, corners)  # Crops and thresholds image
         [x, y, theta] = localizeBot(color, thresh)   # Get x, y, and theta
+        path.append([x,y])
+        drawPath(path, color)
         #print x, y, degrees(theta)
 
 if __name__ == '__main__':
