@@ -48,6 +48,7 @@ class E160_robot:
         self.max_wheel_speed = 50
         self.min_wheel_speed = 20
         self.point_tracked = True
+        self.point_reached = False
         self.encoder_per_sec_to_rad_per_sec = 10
         self.epsilon = 0.05
         self.epsilon2 = 0.1
@@ -162,6 +163,7 @@ class E160_robot:
                 x_des = self.state_des.x
                 y_des = self.state_des.y
             self.state_des.set_state(x_des, y_des, theta_des)
+            print self.state_des.x, self.state_des.y, self.state_des.theta
             self.point_tracked = False
 
         return self.point_tracker_control()
@@ -179,12 +181,16 @@ class E160_robot:
             pho = (delta_x**2 + delta_y**2)**0.5
 
             if pho < self.epsilon:
+                self.point_reached = True
+
+            if self.point_reached:
 
                 delta_theta = self.state_des.theta - self.state_est.theta
                 delta_theta = self.angle_wrap(delta_theta)
 
                 if math.fabs(delta_theta) < self.epsilon2:
                     self.point_tracked = True
+                    self.point_reached = False
                     desiredWheelSpeedL = 0
                     desiredWheelSpeedR = 0
 
