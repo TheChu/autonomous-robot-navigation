@@ -46,7 +46,7 @@ STRIP_WIDTH_FACTOR = 10
 STRIP_HEIGHT_FACTOR = 10
 RADIUS_CUTOFF_PIXELS = 30
 
-url = "http://134.173.220.177:8080/shot.jpg"
+url = "http://134.173.25.237:8080/shot.jpg"
 #                   G   B   R
 RED_BOUND_LOWER = [5, 5, 75]
 RED_BOUND_UPPER = [70, 70, 250]

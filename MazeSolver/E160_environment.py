@@ -11,8 +11,8 @@ class E160_environment:
 
 
     def __init__(self, maze = [], corners = [], pixel_pos = (), file_name = False):
-        self.width = 2.2
-        self.height = 1.7
+        self.width = 2.5
+        self.height = 2.0
         self.cell_width = 0.45
         self.cell_height = 0.4
 
